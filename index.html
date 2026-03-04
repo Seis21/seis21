@@ -1109,6 +1109,10 @@
                     <span>Pastoral</span>
                 </div>
                 <div class="nav-item">
+                    <svg class="nav-icon-svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="6" r="2.5"/><circle cx="13" cy="6" r="2.5"/><path d="M2 16c0-2.5 2-4 5-4s5 1.5 5 4"/><path d="M11 16c0-2.5 2-4 5-4s3 1.5 3 4"/><path d="M10 10v2m-2-1h4"/></svg>
+                    <span>Equipe</span>
+                </div>
+                <div class="nav-item">
                     <svg class="nav-icon-svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L3 8v9a1 1 0 001 1h12a1 1 0 001-1V8l-7-6z"/><circle cx="10" cy="11" r="2.5"/><path d="M7 18v-1c0-1.7 1.3-3 3-3s3 1.3 3 3v1"/></svg>
                     <span>Perfil</span>
                 </div>
@@ -1423,6 +1427,18 @@
                     <div id="pastoralActions"></div>
                 </div>
                 <div id="pastoralTabContent"></div>
+            </div>
+
+            <!-- TELA DE EQUIPE / USUÁRIOS -->
+            <div class="content-page" id="equipeContent">
+                <div style="background:rgba(107,63,160,0.03);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px;margin-bottom:1rem;border-left:3px solid var(--royal-blue);">
+                    <p style="color:var(--gray-500);font-size:0.85rem;margin:0;line-height:1.5;">
+                        <strong style="color:#6B3FA0;">Equipe</strong> — "E ele mesmo deu uns para apóstolos, e outros para profetas, e outros para evangelistas, e outros para pastores e doutores." <span style="color:#6B6580;font-size:0.82rem;">(Ef 4:11)</span>
+                    </p>
+                </div>
+                <div id="equipeContainer">
+                    <div class="loading"><div class="spinner"></div><p>Carregando...</p></div>
+                </div>
             </div>
 
             <div class="content-page" id="perfilContent">
@@ -2010,6 +2026,299 @@
             } catch(e) {
                 console.error('[Seis21] Erro ao carregar dados da igreja:', e);
             }
+        }
+
+        // ==========================================
+        // EQUIPE / GESTÃO DE USUÁRIOS
+        // ==========================================
+        const ROLES_INFO = {
+            pastor_titular: { nome: 'Pastor Titular', icon: '⛪', cor: '#6B3FA0', desc: 'Acesso total a todos os módulos' },
+            pastor_auxiliar: { nome: 'Pastor Auxiliar', icon: '🙏', cor: '#9B6FD0', desc: 'Pastoral + membros + eventos' },
+            lider: { nome: 'Líder', icon: '🎯', cor: '#2E9B5A', desc: 'Seu ministério + escala + membros (leitura)' },
+            secretario: { nome: 'Secretário(a)', icon: '📋', cor: '#5A9AD0', desc: 'Membros + eventos + grupos + relatórios' },
+            tesoureiro: { nome: 'Tesoureiro(a)', icon: '💰', cor: '#D4A840', desc: 'Financeiro + relatórios financeiros' },
+            membro: { nome: 'Membro', icon: '👤', cor: '#8A849A', desc: 'Perfil pessoal + calendário público' },
+            pastor: { nome: 'Pastor', icon: '⛪', cor: '#6B3FA0', desc: 'Acesso total (legado)' },
+            admin: { nome: 'Administrador', icon: '⚙️', cor: '#1A1428', desc: 'Acesso total do sistema' }
+        };
+
+        async function renderEquipe() {
+            var c = document.getElementById('equipeContainer');
+            try {
+                var res = await fetch(API_URL + '/api/usuarios', { headers: { 'Authorization': 'Bearer ' + token } });
+                var data = await res.json();
+
+                if (!data.success) {
+                    c.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400);">Não foi possível carregar a equipe: ' + (data.message || 'Erro') + '</div>';
+                    return;
+                }
+
+                var usuarios = data.data || [];
+                var total = usuarios.length;
+                var ativos = usuarios.filter(function(u) { return u.ativo !== false; }).length;
+
+                var roleCount = {};
+                usuarios.forEach(function(u) { var r = u.role || 'membro'; roleCount[r] = (roleCount[r] || 0) + 1; });
+
+                var html = '';
+
+                // Stats
+                html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.75rem;margin-bottom:1.25rem;">';
+                html += '<div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:1rem;text-align:center;"><div style="font-size:1.6rem;font-weight:700;color:var(--dark-slate);">' + total + '</div><div style="font-size:0.72rem;color:var(--gray-400);">Usuários</div></div>';
+                html += '<div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:1rem;text-align:center;"><div style="font-size:1.6rem;font-weight:700;color:#2E9B5A;">' + ativos + '</div><div style="font-size:0.72rem;color:var(--gray-400);">Ativos</div></div>';
+                var roles = Object.keys(roleCount);
+                html += '<div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:1rem;text-align:center;"><div style="font-size:1.6rem;font-weight:700;color:#6B3FA0;">' + roles.length + '</div><div style="font-size:0.72rem;color:var(--gray-400);">Papéis</div></div>';
+                html += '</div>';
+
+                // Botão adicionar
+                var userRole = userData.role || userData.nivel || 'membro';
+                var podeCriar = (userRole === 'pastor_titular' || userRole === 'pastor' || userRole === 'admin');
+
+                if (podeCriar) {
+                    html += '<div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">';
+                    html += '<button onclick="modalNovoUsuario()" class="btn-add" style="font-size:0.85rem;padding:8px 16px;">+ Novo Usuário</button>';
+                    html += '</div>';
+                }
+
+                // Lista de usuários
+                if (usuarios.length === 0) {
+                    html += '<div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:0.85rem;">Nenhum usuário com acesso ao sistema além de você.</div>';
+                } else {
+                    usuarios.forEach(function(u) {
+                        var ri = ROLES_INFO[u.role] || ROLES_INFO.membro;
+                        var isMe = u._id === (userData.id || userData._id);
+                        var iniciais = (u.nome || 'U').split(' ').map(function(p) { return p[0]; }).slice(0, 2).join('').toUpperCase();
+                        var ultimoAcesso = u.ultimoAcesso ? new Date(u.ultimoAcesso).toLocaleDateString('pt-BR') : 'Nunca';
+
+                        html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:white;border:1px solid var(--gray-200);border-left:3px solid ' + ri.cor + ';border-radius:8px;margin-bottom:8px;' + (u.ativo === false ? 'opacity:0.5;' : '') + '">';
+
+                        // Avatar
+                        if (u.foto) {
+                            html += '<img src="' + u.foto + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">';
+                        } else {
+                            html += '<div style="width:40px;height:40px;border-radius:50%;background:' + ri.cor + ';color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">' + iniciais + '</div>';
+                        }
+
+                        // Info
+                        html += '<div style="flex:1;min-width:0;">';
+                        html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">';
+                        html += '<strong style="font-size:0.9rem;color:var(--dark-slate);">' + u.nome + '</strong>';
+                        if (isMe) html += '<span style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:rgba(107,63,160,0.1);color:#6B3FA0;">Você</span>';
+                        if (u.ativo === false) html += '<span style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:rgba(217,64,88,0.1);color:#D94058;">Inativo</span>';
+                        html += '</div>';
+                        html += '<div style="font-size:0.78rem;color:var(--gray-400);margin-top:2px;">';
+                        html += '<span style="color:' + ri.cor + ';font-weight:600;">' + ri.icon + ' ' + ri.nome + '</span>';
+                        html += ' · ' + (u.email || '');
+                        html += ' · Último acesso: ' + ultimoAcesso;
+                        html += '</div>';
+                        html += '</div>';
+
+                        // Ações
+                        if (podeCriar && !isMe) {
+                            html += '<div style="display:flex;gap:4px;flex-shrink:0;">';
+                            html += '<button onclick="modalEditarRole(\'' + u._id + '\',\'' + u.nome + '\',\'' + u.role + '\')" style="padding:4px 8px;background:none;border:1px solid var(--gray-200);color:var(--gray-500);border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;" title="Alterar papel">Papel</button>';
+                            html += '<button onclick="resetarSenhaUsuario(\'' + u._id + '\',\'' + u.nome + '\')" style="padding:4px 8px;background:none;border:1px solid var(--gray-200);color:var(--gray-500);border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;" title="Resetar senha">Senha</button>';
+                            if (u.ativo === false) {
+                                html += '<button onclick="reativarUsuario(\'' + u._id + '\')" style="padding:4px 8px;background:none;border:1px solid rgba(46,155,90,0.3);color:#2E9B5A;border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;">Reativar</button>';
+                            } else {
+                                html += '<button onclick="desativarUsuario(\'' + u._id + '\',\'' + u.nome + '\')" style="padding:4px 8px;background:none;border:1px solid rgba(217,64,88,0.2);color:#D94058;border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;">Desativar</button>';
+                            }
+                            html += '</div>';
+                        }
+
+                        html += '</div>';
+                    });
+                }
+
+                // Legenda de roles
+                html += '<div style="margin-top:1.5rem;padding:1rem;background:rgba(107,63,160,0.03);border:1px solid var(--gray-200);border-radius:8px;">';
+                html += '<h4 style="color:var(--dark-slate);margin:0 0 0.75rem 0;font-size:0.85rem;">Papéis disponíveis</h4>';
+                html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;">';
+                ['pastor_titular','pastor_auxiliar','lider','secretario','tesoureiro','membro'].forEach(function(r) {
+                    var ri = ROLES_INFO[r];
+                    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:white;border-radius:6px;border:1px solid var(--gray-200);">';
+                    html += '<span style="font-size:1rem;">' + ri.icon + '</span>';
+                    html += '<div><div style="font-size:0.8rem;font-weight:600;color:' + ri.cor + ';">' + ri.nome + '</div>';
+                    html += '<div style="font-size:0.7rem;color:var(--gray-400);">' + ri.desc + '</div></div></div>';
+                });
+                html += '</div></div>';
+
+                c.innerHTML = html;
+            } catch (e) {
+                console.error('Erro renderEquipe:', e);
+                c.innerHTML = '<div style="text-align:center;padding:2rem;color:#D94058;">Erro ao carregar equipe. Verifique a conexão.</div>';
+            }
+        }
+
+        function modalNovoUsuario() {
+            var rolesOpts = '';
+            ['pastor_auxiliar','lider','secretario','tesoureiro','membro'].forEach(function(r) {
+                var ri = ROLES_INFO[r];
+                rolesOpts += '<option value="' + r + '">' + ri.icon + ' ' + ri.nome + ' — ' + ri.desc + '</option>';
+            });
+
+            var membrosOpts = '<option value="">Criar novo membro</option>';
+            if (typeof allMembros !== 'undefined' && allMembros.length) {
+                allMembros.forEach(function(m) {
+                    var temAcesso = m.usuario && m.usuario.email && m.usuario.ativo;
+                    if (!temAcesso) {
+                        membrosOpts += '<option value="' + m._id + '">' + (m.dadosPessoais?.nomeCompleto || m.nome || 'Sem nome') + '</option>';
+                    }
+                });
+            }
+
+            var ov = document.createElement('div');
+            ov.className = 'modal-overlay';
+            ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            ov.onclick = function(ev) { if (ev.target === ov) ov.remove(); };
+            ov.innerHTML = '<div class="modal" style="max-width:480px;"><div class="modal-header"><h3>Novo Usuário</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>'
+            + '<div style="padding:1.25rem;"><div class="mini-form" style="display:flex;flex-direction:column;gap:1rem;">'
+            + '<div><label>Vincular a membro existente</label><select id="nuMembroId" onchange="toggleNuNome()" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-family:DM Sans,sans-serif;">' + membrosOpts + '</select></div>'
+            + '<div id="nuNomeDiv"><label>Nome completo *</label><input type="text" id="nuNome" placeholder="Ex: Maria Silva"></div>'
+            + '<div><label>Email (será o login) *</label><input type="email" id="nuEmail" placeholder="email@exemplo.com"></div>'
+            + '<div><label>Celular</label><input type="text" id="nuCelular" placeholder="(62) 99999-9999"></div>'
+            + '<div><label>Papel no sistema *</label><select id="nuRole" style="width:100%;padding:8px;border:1px solid var(--gray-200);border-radius:8px;font-family:DM Sans,sans-serif;">' + rolesOpts + '</select></div>'
+            + '</div></div>'
+            + '<div style="padding:1rem 1.25rem;display:flex;justify-content:flex-end;gap:0.75rem;border-top:1px solid var(--gray-200);">'
+            + '<button onclick="this.closest(\'.modal-overlay\').remove()" style="padding:0.6rem 1.2rem;background:none;border:1px solid var(--gray-200);border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;color:var(--gray-500);">Cancelar</button>'
+            + '<button onclick="salvarNovoUsuario()" style="padding:0.6rem 1.5rem;background:#6B3FA0;color:white;border:none;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;">Criar Usuário</button>'
+            + '</div></div>';
+            document.body.appendChild(ov);
+        }
+
+        function toggleNuNome() {
+            var sel = document.getElementById('nuMembroId').value;
+            document.getElementById('nuNomeDiv').style.display = sel ? 'none' : 'block';
+        }
+
+        async function salvarNovoUsuario() {
+            var membroId = document.getElementById('nuMembroId').value;
+            var nome = document.getElementById('nuNome').value.trim();
+            var email = document.getElementById('nuEmail').value.trim();
+            var celular = document.getElementById('nuCelular').value.trim();
+            var role = document.getElementById('nuRole').value;
+
+            if (!email) { showAlert('error', 'Email é obrigatório.'); return; }
+            if (!membroId && !nome) { showAlert('error', 'Nome é obrigatório para novo membro.'); return; }
+
+            var dados = { email: email, role: role, celular: celular };
+            if (membroId) dados.membroId = membroId;
+            else dados.nome = nome;
+
+            try {
+                var res = await fetch(API_URL + '/api/usuarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(dados)
+                });
+                var data = await res.json();
+
+                if (data.success) {
+                    document.querySelector('.modal-overlay').remove();
+                    var senha = data.data.senhaTemporaria;
+                    var msgOv = document.createElement('div');
+                    msgOv.className = 'modal-overlay';
+                    msgOv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+                    msgOv.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-header"><h3>Usuário Criado!</h3></div>'
+                    + '<div style="padding:1.5rem;text-align:center;">'
+                    + '<div style="font-size:2rem;margin-bottom:1rem;">✅</div>'
+                    + '<p style="color:var(--dark-slate);font-size:0.9rem;margin-bottom:1rem;"><strong>' + (data.data.nome || nome) + '</strong> agora tem acesso ao sistema como <strong>' + data.data.roleNome + '</strong>.</p>'
+                    + '<div style="background:rgba(107,63,160,0.06);border:1px solid rgba(107,63,160,0.2);border-radius:8px;padding:1rem;margin-bottom:1rem;">'
+                    + '<p style="color:var(--gray-500);font-size:0.78rem;margin:0 0 6px 0;">Credenciais de acesso:</p>'
+                    + '<p style="margin:0;font-size:0.85rem;"><strong>Email:</strong> ' + email + '</p>'
+                    + '<p style="margin:4px 0 0 0;font-size:0.85rem;"><strong>Senha:</strong> <code style="background:white;padding:2px 8px;border-radius:4px;font-size:0.9rem;color:#D94058;">' + senha + '</code></p>'
+                    + '</div>'
+                    + '<p style="color:#D94058;font-size:0.78rem;margin:0;">⚠️ Anote esta senha! Ela é temporária e não será exibida novamente.</p>'
+                    + '</div>'
+                    + '<div style="padding:1rem 1.25rem;border-top:1px solid var(--gray-200);text-align:center;">'
+                    + '<button onclick="navigator.clipboard.writeText(\'' + email + ' / ' + senha + '\').then(()=>showAlert(\'success\',\'Credenciais copiadas!\'));this.closest(\'.modal-overlay\').remove();renderEquipe();" style="padding:0.6rem 1.5rem;background:#6B3FA0;color:white;border:none;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;">Copiar e Fechar</button>'
+                    + '</div></div>';
+                    document.body.appendChild(msgOv);
+                } else {
+                    showAlert('error', data.message || 'Erro ao criar usuário');
+                }
+            } catch (e) {
+                showAlert('error', 'Erro de conexão');
+            }
+        }
+
+        function modalEditarRole(id, nome, roleAtual) {
+            var rolesOpts = '';
+            ['pastor_titular','pastor_auxiliar','lider','secretario','tesoureiro','membro'].forEach(function(r) {
+                var ri = ROLES_INFO[r];
+                rolesOpts += '<option value="' + r + '"' + (r === roleAtual ? ' selected' : '') + '>' + ri.icon + ' ' + ri.nome + '</option>';
+            });
+
+            var ov = document.createElement('div');
+            ov.className = 'modal-overlay';
+            ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            ov.onclick = function(ev) { if (ev.target === ov) ov.remove(); };
+            ov.innerHTML = '<div class="modal" style="max-width:380px;"><div class="modal-header"><h3>Alterar Papel</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>'
+            + '<div style="padding:1.25rem;">'
+            + '<p style="color:var(--dark-slate);font-size:0.9rem;margin:0 0 1rem 0;">Alterar papel de <strong>' + nome + '</strong>:</p>'
+            + '<select id="erRole" style="width:100%;padding:10px;border:1px solid var(--gray-200);border-radius:8px;font-family:DM Sans,sans-serif;">' + rolesOpts + '</select>'
+            + '</div>'
+            + '<div style="padding:1rem 1.25rem;display:flex;justify-content:flex-end;gap:0.75rem;border-top:1px solid var(--gray-200);">'
+            + '<button onclick="this.closest(\'.modal-overlay\').remove()" style="padding:0.6rem 1.2rem;background:none;border:1px solid var(--gray-200);border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;color:var(--gray-500);">Cancelar</button>'
+            + '<button onclick="salvarRole(\'' + id + '\')" style="padding:0.6rem 1.5rem;background:#6B3FA0;color:white;border:none;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;">Salvar</button>'
+            + '</div></div>';
+            document.body.appendChild(ov);
+        }
+
+        async function salvarRole(id) {
+            var role = document.getElementById('erRole').value;
+            try {
+                var res = await fetch(API_URL + '/api/usuarios/' + id + '/role', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ role: role })
+                });
+                var data = await res.json();
+                document.querySelector('.modal-overlay').remove();
+                if (data.success) { showAlert('success', data.message); renderEquipe(); }
+                else showAlert('error', data.message || 'Erro');
+            } catch (e) { showAlert('error', 'Erro de conexão'); }
+        }
+
+        async function resetarSenhaUsuario(id, nome) {
+            if (!confirm('Resetar a senha de ' + nome + '? Uma nova senha temporária será gerada.')) return;
+            try {
+                var res = await fetch(API_URL + '/api/usuarios/' + id + '/reset-senha', {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var data = await res.json();
+                if (data.success) {
+                    var d = data.data;
+                    showAlert('success', 'Nova senha de ' + d.nome + ': ' + d.novaSenha);
+                    navigator.clipboard.writeText(d.novaSenha).catch(function(){});
+                } else showAlert('error', data.message || 'Erro');
+            } catch (e) { showAlert('error', 'Erro de conexão'); }
+        }
+
+        async function desativarUsuario(id, nome) {
+            if (!confirm('Desativar acesso de ' + nome + '? O membro continuará cadastrado, só perde o login.')) return;
+            try {
+                var res = await fetch(API_URL + '/api/usuarios/' + id, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var data = await res.json();
+                if (data.success) { showAlert('success', data.message); renderEquipe(); }
+                else showAlert('error', data.message || 'Erro');
+            } catch (e) { showAlert('error', 'Erro de conexão'); }
+        }
+
+        async function reativarUsuario(id) {
+            try {
+                var res = await fetch(API_URL + '/api/usuarios/' + id + '/reativar', {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var data = await res.json();
+                if (data.success) { showAlert('success', data.message); renderEquipe(); }
+                else showAlert('error', data.message || 'Erro');
+            } catch (e) { showAlert('error', 'Erro de conexão'); }
         }
 
         async function verificarPerfilIncompleto() {
@@ -2957,6 +3266,10 @@
                         document.querySelector('.header h2').textContent = 'Pastoral';
                         renderPastoral();
                     } else if (index === 8) {
+                        document.getElementById('equipeContent').classList.add('active');
+                        document.querySelector('.header h2').textContent = 'Equipe';
+                        renderEquipe();
+                    } else if (index === 9) {
                         document.getElementById('perfilContent').classList.add('active');
                         document.querySelector('.header h2').textContent = 'Perfil da Igreja';
                         renderPerfilIgreja();
@@ -6604,6 +6917,15 @@
                     <button class="tab-btn" onclick="switchMinTab('execucao',this)">Execução S21</button>
                     <button class="tab-btn" onclick="switchMinTab('estrategia',this)">Inteligência S21</button>`;
                 switchMinTab('ebd_inf_salas', tabs.querySelector('.tab-btn'));
+            } else if (_subId === 'musica') {
+                tabs.innerHTML = `
+                    <button class="tab-btn active" onclick="switchMinTab('repertorio',this)">Repertório</button>
+                    <button class="tab-btn" onclick="switchMinTab('dados',this)">Dados</button>
+                    <button class="tab-btn" onclick="switchMinTab('integrantes',this)">Integrantes</button>
+                    <button class="tab-btn" onclick="switchMinTab('escala',this)">Escala</button>
+                    <button class="tab-btn" onclick="switchMinTab('execucao',this)">Execução S21</button>
+                    <button class="tab-btn" onclick="switchMinTab('estrategia',this)">Inteligência S21</button>`;
+                switchMinTab('repertorio', tabs.querySelector('.tab-btn'));
             } else if (_subId === 'liturgia') {
                 tabs.innerHTML = `
                     <button class="tab-btn active" onclick="switchMinTab('liturgia_lista',this)">Liturgia</button>
@@ -6639,6 +6961,7 @@
             else if(tab==='escala') renderMinEscala(c);
             else if(tab==='execucao') renderMinExecucao(c,currentPilar);
             else if(tab==='estrategia') renderMinEstrategia(c);
+            else if(tab==='repertorio') renderRepertorio(c);
             else if(tab==='ebd_infantil_lista') renderEBDInfantil(c);
             else if(tab==='ebd_salas') renderEBDSalas(c);
             else if(tab==='ebd_inf_salas') renderEBDInfSalas(c);
@@ -7011,7 +7334,36 @@
 
         function renderMinIntegrantes(c){
             const list = getMinList('integrantes');
-            c.innerHTML=`<div class="detail-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h4 style="color:${currentPilar.cor};">Integrantes — ${currentSubcategoria.nome}</h4><button class="btn-add" onclick="modalAddMinIntegrante()" >Adicionar</button></div>${list.length?`<table class="table"><thead><tr><th>Nome</th><th>Celular</th><th>Ações</th></tr></thead><tbody>${list.map(it=>`<tr><td>${it.nome}</td><td>${it.celular||'-'}</td><td><button class="btn-action" onclick="removeMinIntegrante('${it._id}')" style="color:#ff6b6b;"></button></td></tr>`).join('')}</tbody></table>`:'<p style="color:#6B6580;text-align:center;">Nenhum integrante. Clique em "Adicionar" para selecionar membros da igreja.</p>'}</div>`;
+            var html = '<div class="detail-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h4 style="color:' + currentPilar.cor + ';">Integrantes — ' + currentSubcategoria.nome + '</h4><button class="btn-add" onclick="modalAddMinIntegrante()">Adicionar</button></div>';
+            if (list.length) {
+                html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+                list.forEach(function(it) {
+                    var tel = it.celular || '';
+                    var telFormatado = tel ? tel.replace(/\D/g,'').replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3') : '—';
+                    var whatsOk = it.lembreteWhatsapp !== false;
+                    var corW = whatsOk ? '#25D366' : 'var(--gray-300)';
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:white;border:1px solid var(--gray-200);border-radius:8px;">';
+                    html += '<div style="flex:1;"><strong style="font-size:0.88rem;color:var(--dark-slate);">' + it.nome + '</strong>';
+                    html += '<div style="font-size:0.78rem;color:var(--gray-400);margin-top:2px;">' + telFormatado + '</div></div>';
+                    html += '<div style="display:flex;align-items:center;gap:8px;">';
+                    // Toggle WhatsApp
+                    html += '<button onclick="toggleWhatsIntegrante(\'' + it._id + '\',' + !whatsOk + ')" title="' + (whatsOk ? 'Lembrete WhatsApp ativo' : 'Lembrete WhatsApp desativado') + '" style="padding:4px 8px;background:none;border:1px solid ' + corW + ';color:' + corW + ';border-radius:6px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif;display:flex;align-items:center;gap:4px;">';
+                    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="' + corW + '"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>';
+                    html += (whatsOk ? 'ON' : 'OFF') + '</button>';
+                    html += '<button onclick="removeMinIntegrante(\'' + it._id + '\')" style="padding:3px 8px;background:none;border:1px solid rgba(217,64,88,0.2);color:#D94058;border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;">✕</button>';
+                    html += '</div></div>';
+                });
+                html += '</div>';
+            } else {
+                html += '<p style="color:var(--gray-400);text-align:center;">Nenhum integrante. Clique em "Adicionar" para selecionar membros da igreja.</p>';
+            }
+            html += '</div>';
+            c.innerHTML = html;
+        }
+
+        async function toggleWhatsIntegrante(subId, val) {
+            var ok = await minAPI.updateItem('integrantes', subId, { lembreteWhatsapp: val });
+            if (ok) switchMinTab('integrantes', null);
         }
 
         async function modalAddMinIntegrante() {
@@ -7024,7 +7376,6 @@
                     if (d.success) { membros = d.data || []; allMembros = membros; }
                 } catch(e) {}
             }
-            // Filtrar quem já está neste ministério
             const jaAdicionados = getMinList('integrantes').map(i => i.membroId);
             const disp = membros.filter(m => !jaAdicionados.includes(m._id));
             
@@ -7032,15 +7383,33 @@
             ov.innerHTML = `<div class="modal" style="max-width:450px;">
                 <div class="modal-header"><h3>Adicionar Integrante ao ${currentSubcategoria.nome}</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
                 <div class="modal-body">
-                    <label style="color:#4A4458;margin-bottom:8px;display:block;">Busque o membro:</label>
+                    <label style="color:var(--gray-500);margin-bottom:8px;display:block;">Busque o membro:</label>
                     ${membroPickerHTML('selMinIntegrante', 'Digite o nome...')}
+                    <div id="intCelPreview" style="margin-top:10px;display:none;padding:8px 12px;background:var(--gray-100);border-radius:8px;font-size:0.82rem;color:var(--gray-500);"></div>
+                    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:0.85rem;color:var(--dark-slate);">
+                        <input type="checkbox" id="intWhatsToggle" checked style="accent-color:#25D366;width:18px;height:18px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                        Deseja ser lembrado via WhatsApp?
+                    </label>
                 </div>
                 <div class="modal-footer">
                     <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
                     <button class="btn-save" onclick="confirmarAddMinIntegrante()">Adicionar</button>
                 </div>
             </div>`; document.body.appendChild(ov);
-            initMembroPicker('selMinIntegrante', membros, { exclude: jaAdicionados });
+            initMembroPicker('selMinIntegrante', membros, {
+                exclude: jaAdicionados,
+                onSelect: function(id, nome, cel) {
+                    var preview = document.getElementById('intCelPreview');
+                    if (cel) {
+                        preview.style.display = 'block';
+                        preview.textContent = 'Celular: ' + cel;
+                    } else {
+                        preview.style.display = 'block';
+                        preview.innerHTML = '<span style="color:#D94058;">Sem celular cadastrado. Atualize o cadastro do membro.</span>';
+                    }
+                }
+            });
         }
 
         async function confirmarAddMinIntegrante() {
@@ -7049,10 +7418,13 @@
             if (!membroId) return showAlert('error', 'Selecione um membro');
             var celEl = document.getElementById('selMinIntegrante_busca');
             var cel = celEl ? (celEl.dataset.cel || '') : '';
+            var whatsToggle = document.getElementById('intWhatsToggle');
+            var lembreteWhatsapp = whatsToggle ? whatsToggle.checked : true;
             const result = await minAPI.addItem('integrantes', {
                 membroId: membroId,
                 nome: nome,
-                celular: cel
+                celular: cel,
+                lembreteWhatsapp: lembreteWhatsapp
             });
             document.querySelector('.modal-overlay').remove();
             if (result) {
@@ -7878,28 +8250,153 @@
 
         function renderMinEscala(c){
             const list = getMinList('escala');
-            c.innerHTML=`<div class="detail-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h4 style="color:${currentPilar.cor};">Escala — ${currentSubcategoria.nome}</h4><button class="btn-add" onclick="addMinEscala()" >Nova Escala</button></div>${list.length?list.map(e=>`<div style="padding:12px;background:var(--gray-100);border-radius:10px;margin-bottom:8px;border-left:3px solid ${currentPilar.cor};"><div style="display:flex;justify-content:space-between;"><strong style="color:#1A1428;">${e.data?new Date(e.data+'T12:00:00').toLocaleDateString('pt-BR'):'-'} ${e.turno||''}</strong><button class="btn-action" onclick="removeMinEscala('${e._id}')" style="color:#ff6b6b;"></button></div><p style="color:#8A849A;font-size:0.85rem;margin:6px 0 0 0;">${e.responsaveis||'-'}</p></div>`).join(''):'<p style="color:#6B6580;text-align:center;">Nenhuma escala.</p>'}</div>`;
+            const integrantes = getMinList('integrantes');
+            var nomeIgreja = userData.nomeIgreja || 'Igreja';
+            var nomeMin = currentSubcategoria ? currentSubcategoria.nome : 'Ministério';
+
+            var html = '<div class="detail-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h4 style="color:' + currentPilar.cor + ';">Escala — ' + nomeMin + '</h4><button class="btn-add" onclick="addMinEscala()">Nova Escala</button></div>';
+
+            if (list.length) {
+                var sorted = list.slice().sort(function(a,b) { return (a.data||'').localeCompare(b.data||''); });
+                sorted.forEach(function(e) {
+                    var dataF = e.data ? new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR', {weekday:'short', day:'numeric', month:'short'}) : '\u2014';
+                    var isPast = e.data && new Date(e.data) < new Date(new Date().toISOString().slice(0,10));
+                    html += '<div style="padding:12px 14px;background:white;border:1px solid var(--gray-200);border-left:3px solid ' + (isPast ? 'var(--gray-300)' : currentPilar.cor) + ';border-radius:10px;margin-bottom:8px;' + (isPast ? 'opacity:0.6;' : '') + '">';
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+                    html += '<div><strong style="color:var(--dark-slate);font-size:0.9rem;">' + dataF + '</strong>';
+                    if (e.turno) html += ' <span style="font-size:0.78rem;color:var(--gray-400);">\u00b7 ' + e.turno + '</span>';
+                    html += '</div>';
+                    html += '<div style="display:flex;gap:4px;">';
+                    if (!isPast) html += '<button onclick="editMinEscala(\'' + e._id + '\')" style="padding:3px 8px;background:none;border:1px solid var(--gray-200);color:var(--gray-500);border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;">Editar</button>';
+                    html += '<button onclick="removeMinEscala(\'' + e._id + '\')" style="padding:3px 8px;background:none;border:1px solid rgba(217,64,88,0.2);color:#D94058;border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;">\u2715</button>';
+                    html += '</div></div>';
+                    var escalados = e.escalados || [];
+                    if (escalados.length > 0) {
+                        escalados.forEach(function(esc) {
+                            var tel = esc.celular || '';
+                            var telLimpo = tel.replace(/\D/g, '');
+                            if (telLimpo.length === 11) telLimpo = '55' + telLimpo;
+                            var whatsOk = esc.lembreteWhatsapp !== false;
+                            var waSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>';
+                            var msg = encodeURIComponent('Olá ' + (esc.nome||'').split(' ')[0] + '! \ud83d\ude4f\n\nLembrando que você está escalado(a) no *' + nomeMin + '* da *' + nomeIgreja + '* no dia *' + dataF + (e.turno ? ' (' + e.turno + ')' : '') + '*.\n\nDeus abençoe seu serviço! \u2764\ufe0f');
+                            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--gray-100);border-radius:6px;margin-bottom:3px;">';
+                            html += '<span style="font-size:0.82rem;color:var(--dark-slate);">' + (esc.nome || '\u2014') + (esc.funcao ? ' <span style="color:var(--gray-400);font-size:0.72rem;">\u00b7 ' + esc.funcao + '</span>' : '') + '</span>';
+                            html += '<div style="display:flex;gap:4px;">';
+                            if (whatsOk && telLimpo.length >= 12) {
+                                html += '<a href="https://wa.me/' + telLimpo + '?text=' + msg + '" target="_blank" style="padding:3px 8px;background:#25D366;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;text-decoration:none;display:flex;align-items:center;gap:3px;">' + waSvg + 'Lembrar</a>';
+                            } else if (!whatsOk) {
+                                html += '<span style="font-size:0.62rem;color:var(--gray-300);padding:3px 6px;">OFF</span>';
+                            } else {
+                                html += '<span style="font-size:0.62rem;color:var(--gray-300);padding:3px 6px;">Sem cel</span>';
+                            }
+                            html += '</div></div>';
+                        });
+                    } else if (e.responsaveis) {
+                        html += '<p style="color:var(--gray-400);font-size:0.82rem;margin:4px 0 0 0;">' + e.responsaveis + '</p>';
+                    } else {
+                        html += '<p style="color:var(--gray-300);font-size:0.78rem;font-style:italic;margin:4px 0 0 0;">Ninguém escalado</p>';
+                    }
+                    var escaladosWhats = (e.escalados || []).filter(function(esc) { var t = (esc.celular||'').replace(/\D/g,''); return esc.lembreteWhatsapp !== false && t.length >= 10; });
+                    if (escaladosWhats.length > 1 && !isPast) {
+                        html += '<div style="margin-top:8px;text-align:right;"><button onclick="enviarTodosLembretes(\'' + e._id + '\')" style="padding:5px 12px;background:#25D366;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.72rem;font-family:DM Sans,sans-serif;">Lembrar todos (' + escaladosWhats.length + ')</button></div>';
+                    }
+                    html += '</div>';
+                });
+            } else {
+                html += '<p style="color:var(--gray-400);text-align:center;">Nenhuma escala.</p>';
+            }
+            html += '</div>';
+            c.innerHTML = html;
         }
 
-        async function addMinEscala(){
+        function enviarTodosLembretes(escalaId) {
+            var list = getMinList('escala');
+            var esc = list.find(function(e) { return e._id === escalaId; });
+            if (!esc || !esc.escalados) return;
+            var nomeIgreja = userData.nomeIgreja || 'Igreja';
+            var nomeMin = currentSubcategoria ? currentSubcategoria.nome : 'Ministério';
+            var dataF = esc.data ? new Date(esc.data + 'T12:00:00').toLocaleDateString('pt-BR', {weekday:'short', day:'numeric', month:'short'}) : '';
+            var count = 0;
+            esc.escalados.forEach(function(e, i) {
+                var tel = (e.celular || '').replace(/\D/g, '');
+                if (tel.length === 11) tel = '55' + tel;
+                if (e.lembreteWhatsapp !== false && tel.length >= 12) {
+                    var msg = encodeURIComponent('Olá ' + (e.nome||'').split(' ')[0] + '! \ud83d\ude4f\n\nLembrando que você está escalado(a) no *' + nomeMin + '* da *' + nomeIgreja + '* no dia *' + dataF + (esc.turno ? ' (' + esc.turno + ')' : '') + '*.\n\nDeus abençoe seu serviço! \u2764\ufe0f');
+                    setTimeout(function() { window.open('https://wa.me/' + tel + '?text=' + msg, '_blank'); }, i * 800);
+                    count++;
+                }
+            });
+            if (count > 0) showAlert('success', count + ' lembrete(s) abrindo no WhatsApp...');
+        }
+
+        async function addMinEscala() { openEscalaModal(null); }
+        function editMinEscala(id) { var e = getMinList('escala').find(function(x) { return x._id === id; }); if (e) openEscalaModal(e); }
+
+        function openEscalaModal(d) {
+            var isEdit = !!d;
+            var integrantes = getMinList('integrantes');
+            var escalados = isEdit ? (d.escalados || []) : [];
+            var integrantesHTML = '';
+            if (integrantes.length > 0) {
+                integrantesHTML = '<label style="color:var(--gray-500);font-size:0.82rem;margin-bottom:6px;display:block;">Selecione os escalados:</label>';
+                integrantesHTML += '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;padding:6px;">';
+                integrantes.forEach(function(it) {
+                    var checked = escalados.some(function(e) { return e.membroId === it.membroId; });
+                    var funcaoVal = checked ? ((escalados.find(function(e){return e.membroId===it.membroId;})||{}).funcao||'') : '';
+                    integrantesHTML += '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--gray-100);">';
+                    integrantesHTML += '<input type="checkbox" class="escCheck" data-id="' + it.membroId + '" data-nome="' + (it.nome||'').replace(/"/g,'&quot;') + '" data-cel="' + (it.celular||'') + '" data-whats="' + (it.lembreteWhatsapp!==false?'1':'0') + '" ' + (checked?'checked':'') + ' style="accent-color:' + currentPilar.cor + ';width:16px;height:16px;">';
+                    integrantesHTML += '<span style="flex:1;font-size:0.85rem;color:var(--dark-slate);">' + it.nome + '</span>';
+                    integrantesHTML += '<input type="text" class="escFuncao" data-id="' + it.membroId + '" placeholder="Função" value="' + funcaoVal + '" style="width:100px;padding:3px 6px;border:1px solid var(--gray-200);border-radius:4px;font-size:0.75rem;font-family:DM Sans,sans-serif;">';
+                    integrantesHTML += '</div>';
+                });
+                integrantesHTML += '</div>';
+            } else {
+                integrantesHTML = '<p style="color:var(--gray-400);font-size:0.82rem;text-align:center;padding:1rem;background:var(--gray-100);border-radius:8px;">Nenhum integrante cadastrado.<br>Adicione na aba "Integrantes" primeiro.</p>';
+            }
             var ov = document.createElement('div'); ov.className = 'modal-overlay';
-            ov.innerHTML = '<div class="modal" style="max-width:450px;"><div class="modal-header"><h3>Nova Escala</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div><div class="modal-body"><div class="mini-form" style="display:flex;flex-direction:column;gap:1rem;"><div><label>Data *</label><input type="date" id="escData" value="' + new Date().toISOString().slice(0,10) + '"></div><div><label>Turno / Horário</label><input type="text" id="escTurno" placeholder="Ex: Manhã, 19h, etc."></div><div><label>Responsáveis</label><input type="text" id="escResp" placeholder="Nomes dos escalados"></div></div></div><div class="modal-footer"><button class="btn-cancel" onclick="this.closest(\'.modal-overlay\').remove()">Cancelar</button><button class="btn-save" onclick="salvarMinEscala()">Salvar</button></div></div>';
+            ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            ov.onclick = function(ev) { if (ev.target === ov) ov.remove(); };
+            ov.innerHTML = '<div class="modal" style="max-width:500px;"><div class="modal-header"><h3>' + (isEdit?'Editar Escala':'Nova Escala') + '</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">\u2715</button></div>'
+            + '<div style="padding:1.25rem;"><div class="mini-form" style="display:flex;flex-direction:column;gap:1rem;">'
+            + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;"><div><label>Data *</label><input type="date" id="escData" value="' + (isEdit?d.data:new Date().toISOString().slice(0,10)) + '"></div>'
+            + '<div><label>Turno / Horário</label><input type="text" id="escTurno" value="' + (isEdit&&d.turno?d.turno:'') + '" placeholder="Ex: Manhã, 19h"></div></div>'
+            + integrantesHTML
+            + '</div></div>'
+            + '<div style="padding:1rem 1.25rem;display:flex;justify-content:flex-end;gap:0.75rem;border-top:1px solid var(--gray-200);">'
+            + '<button onclick="this.closest(\'.modal-overlay\').remove()" style="padding:0.6rem 1.2rem;background:none;border:1px solid var(--gray-200);border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;color:var(--gray-500);">Cancelar</button>'
+            + '<button onclick="' + (isEdit?"salvarEditEscala('"+d._id+"')":'salvarMinEscala()') + '" style="padding:0.6rem 1.5rem;background:' + currentPilar.cor + ';color:white;border:none;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;">' + (isEdit?'Salvar':'Criar') + '</button>'
+            + '</div></div>';
             document.body.appendChild(ov);
+        }
+
+        function coletarEscalados() {
+            var checks = document.querySelectorAll('.escCheck:checked');
+            var escalados = [];
+            checks.forEach(function(ch) {
+                var funcaoEl = document.querySelector('.escFuncao[data-id="' + ch.dataset.id + '"]');
+                escalados.push({ membroId: ch.dataset.id, nome: ch.dataset.nome, celular: ch.dataset.cel, lembreteWhatsapp: ch.dataset.whats === '1', funcao: funcaoEl ? funcaoEl.value.trim() : '' });
+            });
+            return escalados;
         }
 
         async function salvarMinEscala(){
             var d = document.getElementById('escData').value;
             if(!d) return showAlert('error','Informe a data');
-            var result = await minAPI.addItem('escala', {data:d, turno:document.getElementById('escTurno').value.trim(), responsaveis:document.getElementById('escResp').value.trim()});
+            var escalados = coletarEscalados();
+            var result = await minAPI.addItem('escala', { data: d, turno: document.getElementById('escTurno').value.trim(), escalados: escalados, responsaveis: escalados.map(function(e){return e.nome;}).join(', ') });
             document.querySelector('.modal-overlay').remove();
-            if (result) { showSalvo('Escala adicionada'); switchMinTab('escala',null); }
+            if (result) { showSalvo('Escala criada'); switchMinTab('escala',null); }
         }
 
-        async function removeMinEscala(subId) {
-            if (!confirm('Remover escala?')) return;
-            const ok = await minAPI.removeItem('escala', subId);
-            if (ok) { showSalvo('Removida'); switchMinTab('escala',null); }
+        async function salvarEditEscala(id) {
+            var d = document.getElementById('escData').value;
+            if(!d) return showAlert('error','Informe a data');
+            var escalados = coletarEscalados();
+            var ok = await minAPI.updateItem('escala', id, { data: d, turno: document.getElementById('escTurno').value.trim(), escalados: escalados, responsaveis: escalados.map(function(e){return e.nome;}).join(', ') });
+            document.querySelector('.modal-overlay').remove();
+            if (ok) { showSalvo('Escala atualizada'); switchMinTab('escala',null); }
         }
+
 
         function renderMinExecucao(c,pilar){
             const list = getMinList('execucoes');
@@ -9809,6 +10306,159 @@
         // ============================
 
         // (Sermões e Séries foram movidos para a aba Pastoral)
+
+        // ======== REPERTÓRIO DE MÚSICAS ========
+        function getRepertorio() { return getMinList('repertorio') || []; }
+
+        function renderRepertorio(c) {
+            var musicas = getRepertorio();
+            var categorias = {};
+            musicas.forEach(function(m) { var cat = m.categoria || 'Sem categoria'; categorias[cat] = (categorias[cat] || 0) + 1; });
+            var tons = {};
+            musicas.forEach(function(m) { if (m.tom) tons[m.tom] = (tons[m.tom] || 0) + 1; });
+
+            var html = '';
+            // Stats
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-bottom:1.25rem;">';
+            html += '<div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:1rem;text-align:center;"><div style="font-size:1.6rem;font-weight:700;color:var(--dark-slate);">' + musicas.length + '</div><div style="font-size:0.72rem;color:var(--gray-400);">Músicas</div></div>';
+            html += '<div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:1rem;text-align:center;"><div style="font-size:1.6rem;font-weight:700;color:var(--dark-slate);">' + Object.keys(categorias).length + '</div><div style="font-size:0.72rem;color:var(--gray-400);">Categorias</div></div>';
+            var artistas = {}; musicas.forEach(function(m) { if (m.artista) artistas[m.artista] = true; });
+            html += '<div style="background:white;border:1px solid var(--gray-200);border-radius:10px;padding:1rem;text-align:center;"><div style="font-size:1.6rem;font-weight:700;color:var(--dark-slate);">' + Object.keys(artistas).length + '</div><div style="font-size:0.72rem;color:var(--gray-400);">Artistas</div></div>';
+            html += '</div>';
+
+            // Busca e filtros
+            html += '<div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">';
+            html += '<input type="text" id="repBusca" oninput="filtrarRepertorio()" placeholder="Buscar música ou artista..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--gray-200);border-radius:8px;font-family:DM Sans,sans-serif;font-size:0.85rem;">';
+            html += '<select id="repFiltroCat" onchange="filtrarRepertorio()" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-family:DM Sans,sans-serif;font-size:0.82rem;color:var(--gray-500);"><option value="">Todas categorias</option>';
+            Object.keys(categorias).sort().forEach(function(cat) { html += '<option value="' + cat + '">' + cat + ' (' + categorias[cat] + ')</option>'; });
+            html += '</select>';
+            html += '<select id="repFiltroTom" onchange="filtrarRepertorio()" style="padding:8px 10px;border:1px solid var(--gray-200);border-radius:8px;font-family:DM Sans,sans-serif;font-size:0.82rem;color:var(--gray-500);"><option value="">Todos os tons</option>';
+            ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B','Cm','C#m','Dm','D#m','Em','Fm','F#m','Gm','G#m','Am','A#m','Bm'].forEach(function(t) { html += '<option value="' + t + '"' + (tons[t] ? '' : ' disabled') + '>' + t + (tons[t] ? ' (' + tons[t] + ')' : '') + '</option>'; });
+            html += '</select>';
+            html += '<button onclick="modalNovaMusica()" class="btn-add" style="font-size:0.85rem;padding:8px 16px;">Nova Música</button>';
+            html += '</div>';
+
+            // Lista de músicas
+            html += '<div id="repLista">';
+            html += renderListaMusicas(musicas);
+            html += '</div>';
+
+            c.innerHTML = html;
+        }
+
+        function renderListaMusicas(musicas) {
+            if (musicas.length === 0) return '<div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:0.85rem;">Nenhuma música cadastrada. Comece adicionando o repertório da igreja.</div>';
+            var sorted = musicas.slice().sort(function(a, b) { return (a.nome || '').localeCompare(b.nome || ''); });
+            var corCat = { 'Adoração': '#6B3FA0', 'Louvor': '#D94058', 'Hino': '#D4A840', 'Congregacional': '#2E9B5A', 'Celebração': '#E08A3E', 'Especial': '#5A9AD0' };
+            var html = '';
+            sorted.forEach(function(m) {
+                var mid = m._id || '';
+                var cor = corCat[m.categoria] || '#8A849A';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:white;border:1px solid var(--gray-200);border-left:3px solid ' + cor + ';border-radius:8px;margin-bottom:6px;">';
+                html += '<div style="flex:1;min-width:0;">';
+                html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+                html += '<strong style="font-size:0.9rem;color:var(--dark-slate);">' + m.nome + '</strong>';
+                if (m.tom) html += '<span style="font-size:0.68rem;padding:2px 6px;border-radius:4px;background:var(--gray-100);color:var(--gray-500);font-weight:600;">' + m.tom + '</span>';
+                if (m.bpm) html += '<span style="font-size:0.68rem;color:var(--gray-400);">' + m.bpm + ' bpm</span>';
+                html += '</div>';
+                html += '<div style="font-size:0.78rem;color:var(--gray-400);margin-top:2px;">';
+                if (m.artista) html += m.artista;
+                if (m.categoria) html += ' · <span style="color:' + cor + ';">' + m.categoria + '</span>';
+                if (m.ultimaVez) html += ' · Último uso: ' + new Date(m.ultimaVez + 'T12:00:00').toLocaleDateString('pt-BR');
+                html += '</div>';
+                if (m.observacoes) html += '<div style="font-size:0.72rem;color:var(--gray-300);margin-top:2px;font-style:italic;">' + m.observacoes + '</div>';
+                html += '</div>';
+                html += '<div style="display:flex;gap:4px;flex-shrink:0;">';
+                if (m.cifraUrl) html += '<a href="' + m.cifraUrl + '" target="_blank" style="padding:3px 8px;background:none;border:1px solid var(--gray-200);color:var(--gray-500);border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;text-decoration:none;">Cifra</a>';
+                html += '<button onclick="editarMusica(\'' + mid + '\')" style="padding:3px 8px;background:none;border:1px solid var(--gray-200);color:var(--gray-500);border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;">Editar</button>';
+                html += '<button onclick="removerMusica(\'' + mid + '\')" style="padding:3px 8px;background:none;border:1px solid rgba(217,64,88,0.2);color:#D94058;border-radius:6px;cursor:pointer;font-size:0.65rem;font-family:DM Sans,sans-serif;">✕</button>';
+                html += '</div></div>';
+            });
+            return html;
+        }
+
+        function filtrarRepertorio() {
+            var busca = (document.getElementById('repBusca').value || '').toLowerCase().trim();
+            var cat = document.getElementById('repFiltroCat').value;
+            var tom = document.getElementById('repFiltroTom').value;
+            var musicas = getRepertorio().filter(function(m) {
+                if (busca && (m.nome || '').toLowerCase().indexOf(busca) === -1 && (m.artista || '').toLowerCase().indexOf(busca) === -1) return false;
+                if (cat && m.categoria !== cat) return false;
+                if (tom && m.tom !== tom) return false;
+                return true;
+            });
+            document.getElementById('repLista').innerHTML = renderListaMusicas(musicas);
+        }
+
+        function modalNovaMusica() { openMusicaModal(null); }
+        function editarMusica(id) { var m = getRepertorio().find(function(x) { return x._id === id; }); if (m) openMusicaModal(m); }
+
+        function openMusicaModal(d) {
+            var e = !!d;
+            var cats = ['Adoração', 'Louvor', 'Hino', 'Congregacional', 'Celebração', 'Especial', 'Outro'];
+            var catOpts = cats.map(function(c) { return '<option value="' + c + '"' + (e && d.categoria === c ? ' selected' : '') + '>' + c + '</option>'; }).join('');
+            var tons = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B','Cm','C#m','Dm','D#m','Em','Fm','F#m','Gm','G#m','Am','A#m','Bm'];
+            var tomOpts = '<option value="">—</option>' + tons.map(function(t) { return '<option value="' + t + '"' + (e && d.tom === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+
+            var ov = document.createElement('div'); ov.className = 'modal-overlay';
+            ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            ov.onclick = function(ev) { if (ev.target === ov) ov.remove(); };
+            ov.innerHTML = '<div class="modal" style="max-width:520px;"><div class="modal-header"><h3>' + (e ? 'Editar Música' : 'Nova Música') + '</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>'
+            + '<div style="padding:1.25rem;"><div class="mini-form" style="display:flex;flex-direction:column;gap:1rem;">'
+            + '<div><label>Nome da música *</label><input type="text" id="musNome" value="' + (e ? d.nome : '') + '" placeholder="Ex: Quão Grande é o Meu Deus"></div>'
+            + '<div><label>Artista / Banda</label><input type="text" id="musArtista" value="' + (e && d.artista ? d.artista : '') + '" placeholder="Ex: Soraya Moraes"></div>'
+            + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">'
+            + '<div><label>Tom</label><select id="musTom">' + tomOpts + '</select></div>'
+            + '<div><label>BPM</label><input type="number" id="musBpm" min="30" max="250" value="' + (e && d.bpm ? d.bpm : '') + '" placeholder="120"></div>'
+            + '<div><label>Categoria</label><select id="musCat">' + catOpts + '</select></div></div>'
+            + '<div><label>Link da cifra (opcional)</label><input type="url" id="musCifra" value="' + (e && d.cifraUrl ? d.cifraUrl : '') + '" placeholder="https://cifraclub.com.br/..."></div>'
+            + '<div><label>Último uso</label><input type="date" id="musUltima" value="' + (e && d.ultimaVez ? d.ultimaVez : '') + '"></div>'
+            + '<div><label>Observações</label><textarea id="musObs" rows="2" placeholder="Ex: Boa pra abertura, usar com banda completa...">' + (e && d.observacoes ? d.observacoes : '') + '</textarea></div>'
+            + '</div></div>'
+            + '<div style="padding:1rem 1.25rem;display:flex;justify-content:flex-end;gap:0.75rem;border-top:1px solid var(--gray-200);">'
+            + '<button onclick="this.closest(\'.modal-overlay\').remove()" style="padding:0.6rem 1.2rem;background:none;border:1px solid var(--gray-200);border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;color:var(--gray-500);">Cancelar</button>'
+            + '<button onclick="' + (e ? "salvarEditMusica('" + d._id + "')" : "salvarMusica()") + '" style="padding:0.6rem 1.5rem;background:#D94058;color:white;border:none;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;">' + (e ? 'Salvar' : 'Adicionar') + '</button>'
+            + '</div></div>';
+            document.body.appendChild(ov);
+            setTimeout(function() { document.getElementById('musNome').focus(); }, 100);
+        }
+
+        function coletarDadosMusica() {
+            var nome = document.getElementById('musNome').value.trim();
+            if (!nome) { showAlert('error', 'Nome da música é obrigatório.'); return null; }
+            return {
+                nome: nome,
+                artista: document.getElementById('musArtista').value.trim(),
+                tom: document.getElementById('musTom').value,
+                bpm: parseInt(document.getElementById('musBpm').value) || null,
+                categoria: document.getElementById('musCat').value,
+                cifraUrl: document.getElementById('musCifra').value.trim(),
+                ultimaVez: document.getElementById('musUltima').value,
+                observacoes: document.getElementById('musObs').value.trim()
+            };
+        }
+
+        async function salvarMusica() {
+            var dados = coletarDadosMusica();
+            if (!dados) return;
+            var result = await minAPI.addItem('repertorio', dados);
+            document.querySelector('.modal-overlay').remove();
+            if (result) { showAlert('success', 'Música adicionada.'); renderRepertorio(document.getElementById('ministerioTabContent')); }
+        }
+
+        async function salvarEditMusica(id) {
+            var dados = coletarDadosMusica();
+            if (!dados) return;
+            var ok = await minAPI.updateItem('repertorio', id, dados);
+            document.querySelector('.modal-overlay').remove();
+            if (ok) { showAlert('success', 'Música atualizada.'); renderRepertorio(document.getElementById('ministerioTabContent')); }
+        }
+
+        async function removerMusica(id) {
+            if (!confirm('Remover esta música do repertório?')) return;
+            var ok = await minAPI.removeItem('repertorio', id);
+            if (ok) renderRepertorio(document.getElementById('ministerioTabContent'));
+        }
 
 // ======== EBD SALAS ========
         function renderEBDSalas(c) {
