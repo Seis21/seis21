@@ -1051,7 +1051,7 @@
         <div class="recovery-card">
             <div class="recovery-header">
                 <h2>Recuperar Senha</h2>
-                <p>Digite seu email e enviaremos uma nova senha temporária</p>
+                <p>Digite seu email e enviaremos um link para criar uma nova senha</p>
             </div>
             <div id="recoveryAlert"></div>
             <div id="recoveryForm">
@@ -1063,6 +1063,37 @@
                 <button class="btn-secondary" onclick="backToLogin()">Voltar para Login</button>
             </div>
             <div id="newPasswordBox" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- TELA DE DEFINIÇÃO DE SENHA (convite + redefinição via link) -->
+    <div class="recovery-container" id="definePasswordScreen">
+        <div class="recovery-card">
+            <div class="recovery-header">
+                <h2 id="definePasswordTitle">Definir senha</h2>
+                <p id="definePasswordSubtitle">Crie sua senha para acessar o sistema</p>
+            </div>
+            <div id="definePasswordAlert"></div>
+            <div id="definePasswordForm">
+                <div id="definePasswordUserInfo" style="background:rgba(107,63,160,0.06);border:1px solid rgba(107,63,160,0.15);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;display:none;">
+                    <p style="margin:0;font-size:0.88rem;color:var(--dark-slate);">Olá, <strong id="definePasswordNome"></strong>. Escolha uma senha para acessar o Seis21.</p>
+                </div>
+                <div class="input-group" style="position:relative;">
+                    <label>Nova senha <span style="font-size:0.75rem;color:var(--gray-400);">(mínimo 6 caracteres)</span></label>
+                    <input type="password" id="definePasswordNova" placeholder="Crie sua senha" minlength="6" required>
+                </div>
+                <div class="input-group">
+                    <label>Confirme a senha</label>
+                    <input type="password" id="definePasswordConfirm" placeholder="Repita a senha" minlength="6" required>
+                </div>
+                <button class="btn-primary" onclick="salvarNovaSenha()">Salvar senha e entrar</button>
+            </div>
+            <div id="definePasswordSuccess" style="display:none;text-align:center;padding:1rem 0;">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem;">✓</div>
+                <h3 style="color:var(--dark-slate);margin:0 0 0.5rem;">Senha definida!</h3>
+                <p style="color:var(--gray-500);font-size:0.9rem;margin:0 0 1.5rem;">Você já pode fazer login com sua nova senha.</p>
+                <button class="btn-primary" onclick="irParaLogin()">Ir para o Login</button>
+            </div>
         </div>
     </div>
 
@@ -2215,23 +2246,21 @@
 
                 if (data.success) {
                     document.querySelector('.modal-overlay').remove();
-                    var senha = data.data.senhaTemporaria;
                     var msgOv = document.createElement('div');
                     msgOv.className = 'modal-overlay';
                     msgOv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;';
-                    msgOv.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-header"><h3>Usuário Criado!</h3></div>'
+                    msgOv.innerHTML = '<div class="modal" style="max-width:420px;"><div class="modal-header"><h3>Convite Enviado!</h3></div>'
                     + '<div style="padding:1.5rem;text-align:center;">'
-                    + '<div style="font-size:2rem;margin-bottom:1rem;">✅</div>'
-                    + '<p style="color:var(--dark-slate);font-size:0.9rem;margin-bottom:1rem;"><strong>' + (data.data.nome || nome) + '</strong> agora tem acesso ao sistema como <strong>' + data.data.roleNome + '</strong>.</p>'
-                    + '<div style="background:rgba(107,63,160,0.06);border:1px solid rgba(107,63,160,0.2);border-radius:8px;padding:1rem;margin-bottom:1rem;">'
-                    + '<p style="color:var(--gray-500);font-size:0.78rem;margin:0 0 6px 0;">Credenciais de acesso:</p>'
-                    + '<p style="margin:0;font-size:0.85rem;"><strong>Email:</strong> ' + email + '</p>'
-                    + '<p style="margin:4px 0 0 0;font-size:0.85rem;"><strong>Senha:</strong> <code style="background:white;padding:2px 8px;border-radius:4px;font-size:0.9rem;color:#D94058;">' + senha + '</code></p>'
+                    + '<div style="font-size:2.5rem;margin-bottom:1rem;">✓</div>'
+                    + '<p style="color:var(--dark-slate);font-size:0.9rem;margin-bottom:0.75rem;"><strong>' + (data.data.nome || nome) + '</strong> foi adicionado como <strong>' + data.data.roleNome + '</strong>.</p>'
+                    + '<div style="background:rgba(107,63,160,0.06);border:1px solid rgba(107,63,160,0.2);border-radius:8px;padding:0.875rem 1rem;margin-bottom:1rem;">'
+                    + '<p style="margin:0;font-size:0.85rem;color:var(--gray-500);">Um email foi enviado para</p>'
+                    + '<p style="margin:4px 0 0;font-size:0.9rem;font-weight:600;color:var(--dark-slate);">' + email + '</p>'
+                    + '<p style="margin:6px 0 0;font-size:0.8rem;color:var(--gray-400);">com o link para definir a senha (válido por 48h)</p>'
                     + '</div>'
-                    + '<p style="color:#D94058;font-size:0.78rem;margin:0;">⚠️ Anote esta senha! Ela é temporária e não será exibida novamente.</p>'
                     + '</div>'
                     + '<div style="padding:1rem 1.25rem;border-top:1px solid var(--gray-200);text-align:center;">'
-                    + '<button onclick="navigator.clipboard.writeText(\'' + email + ' / ' + senha + '\').then(()=>showAlert(\'success\',\'Credenciais copiadas!\'));this.closest(\'.modal-overlay\').remove();renderEquipe();" style="padding:0.6rem 1.5rem;background:#6B3FA0;color:white;border:none;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;">Copiar e Fechar</button>'
+                    + '<button onclick="this.closest(\'.modal-overlay\').remove();renderEquipe();" style="padding:0.6rem 1.5rem;background:#6B3FA0;color:white;border:none;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;">Fechar</button>'
                     + '</div></div>';
                     document.body.appendChild(msgOv);
                 } else {
@@ -2281,7 +2310,7 @@
         }
 
         async function resetarSenhaUsuario(id, nome) {
-            if (!confirm('Resetar a senha de ' + nome + '? Uma nova senha temporária será gerada.')) return;
+            if (!confirm('Enviar link de redefinição de senha para ' + nome + '?')) return;
             try {
                 var res = await fetch(API_URL + '/api/usuarios/' + id + '/reset-senha', {
                     method: 'PUT',
@@ -2289,9 +2318,7 @@
                 });
                 var data = await res.json();
                 if (data.success) {
-                    var d = data.data;
-                    showAlert('success', 'Nova senha de ' + d.nome + ': ' + d.novaSenha);
-                    navigator.clipboard.writeText(d.novaSenha).catch(function(){});
+                    showAlert('success', 'Link de redefinição enviado para ' + (data.data ? data.data.email : nome) + '.');
                 } else showAlert('error', data.message || 'Erro');
             } catch (e) { showAlert('error', 'Erro de conexão'); }
         }
@@ -2707,6 +2734,9 @@
                 return;
             }
 
+            const btn = document.querySelector('#recoveryForm .btn-primary');
+            if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
             try {
                 const response = await fetch(`${API_URL}/api/auth/recuperar-senha`, {
                     method: 'POST',
@@ -2717,55 +2747,30 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Esconder formulário
                     document.getElementById('recoveryForm').style.display = 'none';
-                    
-                    // Mostrar nova senha
                     const passwordBox = document.getElementById('newPasswordBox');
                     passwordBox.innerHTML = `
-                        <div style="background:linear-gradient(135deg,#D1FAE5,#A7F3D0);border:3px solid #10B981;padding:2rem;border-radius:16px;margin-top:1.5rem;box-shadow:0 0 30px rgba(16,185,129,0.3);">
-                            <h3 style="color:#065F46;font-size:1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
-                                <span style="color:#2E9B5A;">•</span>
-                                Nova Senha Gerada!
-                            </h3>
-                            <p style="color:#065F46;margin-bottom:1.5rem;">
-                                Olá <strong>${data.data.nome}</strong>, sua senha foi redefinida com sucesso!
+                        <div style="background:rgba(46,155,90,0.08);border:1px solid rgba(46,155,90,0.3);border-radius:12px;padding:1.5rem;text-align:center;">
+                            <div style="font-size:2.5rem;margin-bottom:0.75rem;">✓</div>
+                            <h3 style="color:var(--dark-slate);margin:0 0 0.5rem;">Email enviado!</h3>
+                            <p style="color:var(--gray-500);font-size:0.9rem;margin:0 0 1rem;line-height:1.6;">
+                                Verifique sua caixa de entrada. O link para redefinir a senha é válido por <strong>2 horas</strong>.
                             </p>
-                            
-                            <div style="background:white;padding:1rem;border-radius:8px;margin-bottom:0.8rem;border-left:4px solid #10B981;">
-                                <label style="display:block;font-size:0.85rem;color:#065F46;font-weight:600;margin-bottom:0.3rem;">SEU EMAIL</label>
-                                <div style="font-family:Courier New,monospace;font-size:1.2rem;color:#1A1428;font-weight:700;display:flex;align-items:center;gap:1rem;">
-                                    <span id="newEmail" style="color:#1A1428;">${data.data.email}</span>
-                                    <button onclick="copyToClipboard('newEmail')" style="padding:4px 12px;background:#10B981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">Copiar</button>
-                                </div>
-                            </div>
-                            
-                            <div style="background:white;padding:1rem;border-radius:8px;margin-bottom:0.8rem;border-left:4px solid #10B981;">
-                                <label style="display:block;font-size:0.85rem;color:#065F46;font-weight:600;margin-bottom:0.3rem;">NOVA SENHA TEMPORÁRIA</label>
-                                <div style="font-family:Courier New,monospace;font-size:1.2rem;color:#1A1428;font-weight:700;display:flex;align-items:center;gap:1rem;">
-                                    <span id="newPassword" style="color:#1A1428;">${data.data.novaSenhaTemporaria}</span>
-                                    <button onclick="copyToClipboard('newPassword')" style="padding:4px 12px;background:#10B981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">Copiar</button>
-                                </div>
-                            </div>
-                            
-                            <p style="margin-top:1rem;color:#065F46;font-size:0.9rem;text-align:center;">
-                                Guarde esta senha e faça login para acessar o sistema!
+                            <p style="color:var(--gray-400);font-size:0.8rem;margin:0 0 1.25rem;">
+                                Não recebeu? Verifique a pasta de spam ou solicite novamente.
                             </p>
-                            
-                            <button class="btn-primary" onclick="backToLogin()" style="margin-top:1rem;">
-                                Fazer Login Agora
-                            </button>
+                            <button class="btn-secondary" onclick="backToLogin()">Voltar para o Login</button>
                         </div>
                     `;
                     passwordBox.style.display = 'block';
-                    
-                    // Scroll para a senha
                     passwordBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    showRecoveryAlert('error', data.message || 'Erro ao recuperar senha.');
+                    showRecoveryAlert('error', data.message || 'Erro ao enviar email.');
+                    if (btn) { btn.disabled = false; btn.textContent = 'Recuperar Senha'; }
                 }
             } catch (error) {
                 showRecoveryAlert('error', 'Erro ao conectar com o servidor.');
+                if (btn) { btn.disabled = false; btn.textContent = 'Recuperar Senha'; }
                 console.error(error);
             }
         }
@@ -2774,6 +2779,97 @@
             const alertBox = document.getElementById('recoveryAlert');
             alertBox.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
             setTimeout(() => alertBox.innerHTML = '', 5000);
+        }
+
+        // ==========================================
+        // FLUXO DE TOKEN VIA URL (convite + redefinição)
+        // ==========================================
+
+        var _tokenUrl = null; // guarda o token enquanto o usuário preenche a senha
+
+        async function handleTokenURL(action, token) {
+            _tokenUrl = token;
+            document.getElementById('loadingScreen').style.display = 'none';
+
+            // Configurar textos conforme ação
+            if (action === 'definir-senha') {
+                document.getElementById('definePasswordTitle').textContent = 'Definir senha';
+                document.getElementById('definePasswordSubtitle').textContent = 'Crie sua senha para acessar o sistema';
+            } else {
+                document.getElementById('definePasswordTitle').textContent = 'Redefinir senha';
+                document.getElementById('definePasswordSubtitle').textContent = 'Crie uma nova senha para sua conta';
+            }
+
+            // Mostrar tela
+            document.getElementById('definePasswordScreen').classList.add('active');
+
+            // Verificar token com backend
+            try {
+                var res = await fetch(API_URL + '/api/auth/verificar-token/' + token);
+                var data = await res.json();
+
+                if (data.success) {
+                    var infoDiv = document.getElementById('definePasswordUserInfo');
+                    document.getElementById('definePasswordNome').textContent = data.data.nome;
+                    infoDiv.style.display = 'block';
+                } else {
+                    // Token inválido ou expirado
+                    document.getElementById('definePasswordForm').innerHTML =
+                        '<div style="text-align:center;padding:1rem 0;">'
+                        + '<div style="font-size:2rem;margin-bottom:0.75rem;">⚠</div>'
+                        + '<p style="color:var(--dark-slate);font-size:0.95rem;margin:0 0 0.5rem;font-weight:600;">Link inválido ou expirado</p>'
+                        + '<p style="color:var(--gray-500);font-size:0.88rem;margin:0 0 1.5rem;">' + (data.message || 'Este link não é mais válido.') + '</p>'
+                        + '<button class="btn-primary" onclick="irParaLogin()">Ir para o Login</button>'
+                        + '</div>';
+                }
+            } catch (e) {
+                console.error('Erro ao verificar token:', e);
+            }
+        }
+
+        async function salvarNovaSenha() {
+            var nova = document.getElementById('definePasswordNova').value;
+            var confirma = document.getElementById('definePasswordConfirm').value;
+
+            if (!nova || nova.length < 6) {
+                document.getElementById('definePasswordAlert').innerHTML = '<div class="alert alert-error">A senha deve ter pelo menos 6 caracteres.</div>';
+                return;
+            }
+            if (nova !== confirma) {
+                document.getElementById('definePasswordAlert').innerHTML = '<div class="alert alert-error">As senhas não conferem.</div>';
+                return;
+            }
+
+            var btn = document.querySelector('#definePasswordForm .btn-primary');
+            if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+            try {
+                var res = await fetch(API_URL + '/api/auth/redefinir-senha/' + _tokenUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ novaSenha: nova })
+                });
+                var data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('definePasswordForm').style.display = 'none';
+                    document.getElementById('definePasswordAlert').innerHTML = '';
+                    document.getElementById('definePasswordSuccess').style.display = 'block';
+                    // Limpar token da URL sem reload
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } else {
+                    document.getElementById('definePasswordAlert').innerHTML = '<div class="alert alert-error">' + (data.message || 'Erro ao salvar senha.') + '</div>';
+                    if (btn) { btn.disabled = false; btn.textContent = 'Salvar senha e entrar'; }
+                }
+            } catch (e) {
+                document.getElementById('definePasswordAlert').innerHTML = '<div class="alert alert-error">Erro de conexão. Tente novamente.</div>';
+                if (btn) { btn.disabled = false; btn.textContent = 'Salvar senha e entrar'; }
+            }
+        }
+
+        function irParaLogin() {
+            document.getElementById('definePasswordScreen').classList.remove('active');
+            document.getElementById('loginScreen').classList.add('active');
         }
 
         async function loadDashboard() {
@@ -5338,7 +5434,17 @@
 
         // Iniciar verificação
         setupNavigation();
-        checkSystemStatus();
+
+        // Verificar se há token de ação na URL (convite ou redefinição de senha)
+        var _urlParams = new URLSearchParams(window.location.search);
+        var _urlAction = _urlParams.get('action');
+        var _urlToken = _urlParams.get('token');
+
+        if (_urlAction && _urlToken && (_urlAction === 'definir-senha' || _urlAction === 'redefinir-senha')) {
+            handleTokenURL(_urlAction, _urlToken);
+        } else {
+            checkSystemStatus();
+        }
 
         // ==========================================
         // MÓDULO DE GRUPOS — JAVASCRIPT COMPLETO
