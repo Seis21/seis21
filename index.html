@@ -9628,7 +9628,7 @@
                 var rows = '';
                 cfCategorias.forEach(function(grupo){
                     // Header da categoria
-                    rows += '<div style="display:grid;grid-template-columns:1fr 100px 60px 60px;gap:8px;padding:8px 0 4px 0;margin-top:8px;border-bottom:2px solid '+grupo.cor+'20;">'
+                    rows += '<div style="display:grid;grid-template-columns:1fr 80px 60px 60px 60px;gap:8px;padding:8px 0 4px 0;margin-top:8px;border-bottom:2px solid '+grupo.cor+'20;">'
                         +'<div style="font-size:0.75rem;font-weight:700;color:'+grupo.cor+';text-transform:uppercase;letter-spacing:0.04em;display:flex;align-items:center;gap:5px;">'
                         +'<div style="width:8px;height:8px;border-radius:2px;background:'+grupo.cor+';"></div>'+grupo.cat
                         +'<span id="cfCatPct_'+grupo.cat.replace(/\s/g,'')+'" style="font-weight:500;font-size:0.72rem;color:var(--gray-400);margin-left:4px;">0%</span>'
@@ -9636,12 +9636,10 @@
                         +'<div></div><div></div><div></div>'
                     +'</div>';
                     grupo.itens.forEach(function(it){
-                        rows += '<div style="display:grid;grid-template-columns:1fr 100px 60px 60px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-100);" id="cfSetup_'+idx+'" data-cat="'+grupo.cat+'">'
-                            +'<div style="padding-left:14px;">'
-                                +'<div style="font-size:0.85rem;color:var(--dark-slate);font-weight:500;">'+it.desc+'</div>'
-                                +'<div style="font-size:0.68rem;color:var(--gray-400);">Dia '+it.dia+'</div>'
-                            +'</div>'
+                        rows += '<div style="display:grid;grid-template-columns:1fr 80px 60px 60px 60px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-100);" id="cfSetup_'+idx+'" data-cat="'+grupo.cat+'">'
+                            +'<div style="padding-left:14px;font-size:0.85rem;color:var(--dark-slate);font-weight:500;">'+it.desc+'</div>'
                             +'<input type="text" inputmode="numeric" placeholder="0,00" id="cfVal_'+idx+'" data-cat="'+grupo.cat+'" oninput="maskMoeda(this)" style="padding:5px 8px;border-radius:6px;border:1px solid var(--gray-200);font-size:0.85rem;font-family:DM Sans,sans-serif;text-align:right;background:white;color:var(--dark-slate);">'
+                            +'<input type="number" min="1" max="31" placeholder="Dia" id="cfDia_'+idx+'" value="'+it.dia+'" title="Dia de débito/pagamento" style="padding:5px 6px;border-radius:6px;border:1px solid var(--gray-200);font-size:0.82rem;font-family:DM Sans,sans-serif;text-align:center;background:white;color:#4A4458;width:100%;">'
                             +'<div id="cfPctI_'+idx+'" style="text-align:center;font-size:0.78rem;font-weight:600;color:var(--gray-300);">—</div>'
                             +'<div id="cfPctC_'+idx+'" style="text-align:center;font-size:0.78rem;font-weight:600;color:var(--gray-300);">—</div>'
                         +'</div>';
@@ -9656,9 +9654,10 @@
                 c.innerHTML = guia + '<div class="detail-card">'
                     +'<h4 style="color:var(--dark-slate);margin:0 0 0.5rem 0;font-size:1.05rem;">Custos Fixos Mensais</h4>'
                     +'<p style="color:var(--gray-500);font-size:0.82rem;margin:0 0 1rem 0;">Preencha apenas os valores que se aplicam à sua igreja. Itens sem valor serão ignorados.</p>'
-                    +'<div style="padding:8px 0;border-bottom:2px solid var(--gray-200);margin-bottom:0;display:grid;grid-template-columns:1fr 100px 60px 60px;gap:8px;">'
+                    +'<div style="padding:8px 0;border-bottom:2px solid var(--gray-200);margin-bottom:0;display:grid;grid-template-columns:1fr 80px 60px 60px 60px;gap:8px;">'
                         +'<div style="font-size:0.68rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;">Descrição</div>'
                         +'<div style="font-size:0.68rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;text-align:right;">Valor / Mês</div>'
+                        +'<div style="font-size:0.68rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;text-align:center;">Dia</div>'
                         +'<div style="font-size:0.68rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;text-align:center;">% Item</div>'
                         +'<div style="font-size:0.68rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;text-align:center;">% Categ.</div>'
                     +'</div>'
@@ -9752,12 +9751,13 @@
             div.id = id;
             div.dataset.cat = catNome;
             div.className = 'cfCatNovoItem';
-            div.style.cssText = 'display:grid;grid-template-columns:1fr 100px 60px 60px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-100);';
+            div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 60px 60px 60px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-100);';
             div.innerHTML = '<div style="display:flex;gap:4px;align-items:center;padding-left:14px;">'
-                +'<input type="text" placeholder="Descrição" id="'+id+'_desc" style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid var(--gray-200);font-size:0.82rem;font-family:DM Sans,sans-serif;background:white;color:var(--dark-slate);">'
-                +'<button onclick="document.getElementById(\''+id+'\').remove();calcTotalSetupCF();" style="background:none;border:none;color:#D94058;cursor:pointer;font-size:0.78rem;padding:2px;">X</button>'
+                +'<input type="text" placeholder="Descrição" id="'+id+'_desc" style="flex:1;padding:5px 8px;border-radius:6px;border:1px solid '+cor+'44;font-size:0.82rem;font-family:DM Sans,sans-serif;background:white;color:var(--dark-slate);">'
+                +'<button onclick="document.getElementById(\''+id+'\').remove();calcTotalSetupCF();" style="background:none;border:none;color:#D94058;cursor:pointer;font-size:0.78rem;padding:2px;">✕</button>'
                 +'</div>'
-                +'<input type="number" placeholder="R$ 0,00" step="0.01" min="0" id="'+id+'_val" data-cat="'+catNome+'" oninput="calcTotalSetupCF()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--gray-200);font-size:0.85rem;font-family:DM Sans,sans-serif;text-align:right;background:white;color:var(--dark-slate);">'
+                +'<input type="text" inputmode="numeric" placeholder="0,00" id="'+id+'_val" data-cat="'+catNome+'" oninput="maskMoeda(this);calcTotalSetupCF();" style="padding:5px 8px;border-radius:6px;border:1px solid var(--gray-200);font-size:0.85rem;font-family:DM Sans,sans-serif;text-align:right;background:white;color:var(--dark-slate);">'
+                +'<input type="number" min="1" max="31" placeholder="Dia" id="'+id+'_dia" title="Dia de débito" style="padding:5px 6px;border-radius:6px;border:1px solid var(--gray-200);font-size:0.82rem;font-family:DM Sans,sans-serif;text-align:center;background:white;color:#4A4458;width:100%;">'
                 +'<div id="'+id+'_pctI" style="text-align:center;font-size:0.78rem;font-weight:600;color:var(--gray-300);">—</div>'
                 +'<div id="'+id+'_pctC" style="text-align:center;font-size:0.78rem;font-weight:600;color:var(--gray-300);">—</div>';
             document.getElementById('cfCatNovos_'+catId).appendChild(div);
@@ -9946,7 +9946,9 @@
                 for (var j=0; j<cfCategorias[g].itens.length; j++) {
                     var val = parseMoeda(document.getElementById('cfVal_'+idx)?.value);
                     if (val > 0) {
-                        await finAPI.addItem('custosfixos',{descricao:cfCategorias[g].itens[j].desc, categoria:cfCategorias[g].cat, valor:val, diaVencimento:cfCategorias[g].itens[j].dia});
+                        var diaInput = document.getElementById('cfDia_'+idx);
+                        var dia = diaInput ? (diaInput.value || cfCategorias[g].itens[j].dia) : cfCategorias[g].itens[j].dia;
+                        await finAPI.addItem('custosfixos',{descricao:cfCategorias[g].itens[j].desc, categoria:cfCategorias[g].cat, valor:val, diaVencimento:dia});
                         salvos++;
                     }
                     idx++;
@@ -9958,11 +9960,13 @@
                 var cdiv = catNovosEls[m];
                 var cDescInp = cdiv.querySelector('[id$=_desc]');
                 var cValInp = cdiv.querySelector('[id$=_val]');
+                var cDiaInp = cdiv.querySelector('[id$=_dia]');
                 var cDesc = cDescInp ? cDescInp.value.trim() : '';
-                var cVal = cValInp ? parseFloat(cValInp.value)||0 : 0;
+                var cVal = cValInp ? parseMoeda(cValInp.value) : 0;
+                var cDia = cDiaInp ? (cDiaInp.value || '1') : '1';
                 var cCat = cdiv.dataset.cat || 'Outros';
                 if (cDesc && cVal > 0) {
-                    await finAPI.addItem('custosfixos',{descricao:cDesc, categoria:cCat, valor:cVal, diaVencimento:'1'});
+                    await finAPI.addItem('custosfixos',{descricao:cDesc, categoria:cCat, valor:cVal, diaVencimento:cDia});
                     salvos++;
                 }
             }
@@ -10001,7 +10005,21 @@
             cats.push('+ Nova Categoria...');
             var isEdit=!!editId;
             var m=document.createElement('div');m.className='modal active';m.id='modalCF';
-            m.innerHTML='<div class="modal-content" style="max-width:450px;"><div class="modal-header"><h3 class="modal-title">'+(isEdit?'Editar':'Novo')+' Custo Fixo</h3><button class="btn-close" onclick="document.getElementById(\'modalCF\').remove()">&times;</button></div><div style="padding:1.5rem;display:flex;flex-direction:column;gap:1rem;"><div class="form-group"><label class="form-label">Descrição *</label><input type="text" id="cfDesc" class="form-control"></div><div class="form-group"><label class="form-label">Categoria</label><select id="cfCat" class="form-control" onchange="if(this.value===\'+ Nova Categoria...\'){var n=prompt(\'Nome da nova categoria:\');if(n){finAPI.addItem(\'categorias\',{grupo:\'custosfixos\',nome:n});var o=document.createElement(\'option\');o.value=n;o.text=n;this.add(o,this.options.length-1);this.value=n;}else{this.value=this.options[0].value;}}">'+cats.map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select></div><div class="form-group"><label class="form-label">Valor (R$) *</label><input type="number" id="cfValor" class="form-control" step="0.01"></div><div class="form-group"><label class="form-label">Dia Vencimento</label><input type="number" id="cfDia" class="form-control" min="1" max="31"></div><button class="btn-add" onclick="salvarCustoFixo(\''+(editId||'')+'\')" style="width:100%;">Salvar</button></div></div>';
+            m.innerHTML='<div class="modal-content" style="max-width:480px;font-family:DM Sans,sans-serif;">'
+                +'<div class="modal-header" style="border-bottom:1px solid #E8E6ED;padding:1.2rem 1.5rem;">'
+                +'<h3 class="modal-title" style="font-family:Cormorant Garamond,serif;font-size:1.25rem;color:#1A1428;font-weight:600;">'+(isEdit?'Editar':'Novo')+' Custo Fixo</h3>'
+                +'<button class="btn-close" onclick="document.getElementById(\'modalCF\').remove()" style="font-size:1.3rem;color:#8A849A;">&times;</button>'
+                +'</div>'
+                +'<div style="padding:1.5rem;display:flex;flex-direction:column;gap:1.1rem;">'
+                +'<div class="form-group"><label class="form-label" style="font-size:0.82rem;font-weight:600;color:#4A4458;margin-bottom:4px;display:block;">Descrição *</label><input type="text" id="cfDesc" class="form-control" placeholder="Ex: Aluguel do templo" style="font-family:DM Sans,sans-serif;"></div>'
+                +'<div class="form-group"><label class="form-label" style="font-size:0.82rem;font-weight:600;color:#4A4458;margin-bottom:4px;display:block;">Categoria</label>'
+                +'<select id="cfCat" class="form-control" style="font-family:DM Sans,sans-serif;" onchange="if(this.value===\'+ Nova Categoria...\'){var n=prompt(\'Nome da nova categoria:\');if(n){finAPI.addItem(\'categorias\',{grupo:\'custosfixos\',nome:n});var o=document.createElement(\'option\');o.value=n;o.text=n;this.add(o,this.options.length-1);this.value=n;}else{this.value=this.options[0].value;}}">'+cats.map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select></div>'
+                +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">'
+                +'<div class="form-group"><label class="form-label" style="font-size:0.82rem;font-weight:600;color:#4A4458;margin-bottom:4px;display:block;">Valor mensal (R$) *</label><input type="number" id="cfValor" class="form-control" step="0.01" placeholder="0,00" style="font-family:DM Sans,sans-serif;"></div>'
+                +'<div class="form-group"><label class="form-label" style="font-size:0.82rem;font-weight:600;color:#4A4458;margin-bottom:4px;display:block;">Dia de débito</label><input type="number" id="cfDia" class="form-control" min="1" max="31" placeholder="Ex: 10" style="font-family:DM Sans,sans-serif;"></div>'
+                +'</div>'
+                +'<button class="btn-add" onclick="salvarCustoFixo(\''+(editId||'')+'\')" style="width:100%;padding:11px;font-size:0.95rem;margin-top:0.3rem;">Salvar</button>'
+                +'</div></div>';
             document.body.appendChild(m);
             if(isEdit){var list=await finAPI.getList('custosfixos');var cf=list.find(function(x){return x._id===editId;});if(cf){document.getElementById('cfDesc').value=cf.descricao||'';document.getElementById('cfCat').value=cf.categoria||cats[0];document.getElementById('cfValor').value=cf.valor||'';document.getElementById('cfDia').value=cf.diaVencimento||'';}}
         }
