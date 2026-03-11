@@ -2700,6 +2700,21 @@
             location.reload();
         }
 
+        // Fetch com interceptação automática de token expirado
+        async function authFetch(url, options = {}) {
+            if (!options.headers) options.headers = {};
+            if (token) options.headers['Authorization'] = 'Bearer ' + token;
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userData');
+                showAlert('error', 'Sua sessão expirou. Fazendo login novamente...');
+                setTimeout(function() { location.reload(); }, 2000);
+                throw new Error('Sessão expirada');
+            }
+            return res;
+        }
+
         function showRecovery() {
             document.getElementById('loginScreen').classList.remove('active');
             document.getElementById('recoveryScreen').classList.add('active');
@@ -2877,10 +2892,7 @@
                 // Buscar igreja do usuário
                 const igrejaId = userData.igreja || userData.igrejaId || '';
                 
-                const response = await fetch(`${API_URL}/api/dashboard?igreja=${igrejaId}`, {
-                    headers: { 
-                        'Authorization': `Bearer ${token}`
-                    },
+                const response = await authFetch(`${API_URL}/api/dashboard?igreja=${igrejaId}`, {
                     signal: AbortSignal.timeout(30000)
                 });
 
@@ -4887,9 +4899,7 @@
         async function loadMembros() {
             try {
                 const igrejaId = userData.igrejaId || userData.igreja;
-                const response = await fetch(`${API_URL}/api/membros?igreja=${igrejaId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await authFetch(`${API_URL}/api/membros?igreja=${igrejaId}`);
                 const data = await response.json();
                 if (data.success) {
                     allMembros = data.data;
@@ -5456,7 +5466,7 @@
         async function loadGrupos() {
             try {
                 const igrejaId = userData.igrejaId || userData.igreja;
-                const res = await fetch(`${API_URL}/api/grupos?igreja=${igrejaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await authFetch(`${API_URL}/api/grupos?igreja=${igrejaId}`);
                 const data = await res.json();
                 if (data.success) {
                     allGrupos = data.data || [];
@@ -9370,75 +9380,73 @@
         const finAPI = {
             async load() {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro`, { headers: { 'Authorization': 'Bearer ' + token } });
+                    const res = await authFetch(`${API_URL}/api/financeiro`);
                     const data = await res.json();
                     return data.success ? data.data : null;
                 } catch(e) { console.error('[Financeiro] Erro:', e); return null; }
             },
             async getList(subcol) {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/${subcol}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                    const res = await authFetch(`${API_URL}/api/financeiro/${subcol}`);
                     const data = await res.json();
                     return data.success ? data.data : [];
                 } catch(e) { console.error(`[Fin] Erro ${subcol}:`, e); return []; }
             },
             async addItem(subcol, item) {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/${subcol}`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    const res = await authFetch(`${API_URL}/api/financeiro/${subcol}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(item)
                     });
                     const data = await res.json();
                     if (!data.success) showAlert('error', data.message || 'Erro');
                     return data.success ? data.data : null;
-                } catch(e) { showAlert('error', 'Erro de conexão'); return null; }
+                } catch(e) { if(e.message !== 'Sessão expirada') showAlert('error', 'Erro de conexão'); return null; }
             },
             async updateItem(subcol, subId, updates) {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/${subcol}/${subId}`, {
-                        method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    const res = await authFetch(`${API_URL}/api/financeiro/${subcol}/${subId}`, {
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(updates)
                     });
                     const data = await res.json();
                     if (!data.success) showAlert('error', data.message || 'Erro');
                     return data.success ? data.data : null;
-                } catch(e) { showAlert('error', 'Erro de conexão'); return null; }
+                } catch(e) { if(e.message !== 'Sessão expirada') showAlert('error', 'Erro de conexão'); return null; }
             },
             async removeItem(subcol, subId) {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/${subcol}/${subId}`, {
-                        method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token }
-                    });
+                    const res = await authFetch(`${API_URL}/api/financeiro/${subcol}/${subId}`, { method: 'DELETE' });
                     const data = await res.json();
                     return data.success;
-                } catch(e) { showAlert('error', 'Erro de conexão'); return false; }
+                } catch(e) { if(e.message !== 'Sessão expirada') showAlert('error', 'Erro de conexão'); return false; }
             },
             async addBatch(itens) {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/patrimonio/lote`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    const res = await authFetch(`${API_URL}/api/financeiro/patrimonio/lote`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ itens })
                     });
                     const data = await res.json();
                     if (!data.success) showAlert('error', data.message || 'Erro');
                     return data.success ? data.data : null;
-                } catch(e) { showAlert('error', 'Erro de conexão'); return null; }
+                } catch(e) { if(e.message !== 'Sessão expirada') showAlert('error', 'Erro de conexão'); return null; }
             },
             async saveOrcAno(ano, itens) {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/orcamento/ano`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    const res = await authFetch(`${API_URL}/api/financeiro/orcamento/ano`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ ano, itens })
                     });
                     const data = await res.json();
                     if (!data.success) showAlert('error', data.message || 'Erro');
                     return data.success;
-                } catch(e) { showAlert('error', 'Erro de conexão'); return false; }
+                } catch(e) { if(e.message !== 'Sessão expirada') showAlert('error', 'Erro de conexão'); return false; }
             },
             async restaurarPlano() {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/planocontas/restaurar`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+                    const res = await authFetch(`${API_URL}/api/financeiro/planocontas/restaurar`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }
                     });
                     const data = await res.json();
                     return data.success;
@@ -9446,7 +9454,7 @@
             },
             async getCategorias(grupo) {
                 try {
-                    const res = await fetch(`${API_URL}/api/financeiro/categorias/${grupo}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                    const res = await authFetch(`${API_URL}/api/financeiro/categorias/${grupo}`);
                     const data = await res.json();
                     return data.success ? data.data : [];
                 } catch(e) { return []; }
