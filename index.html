@@ -5482,6 +5482,7 @@
                 <td style="display:flex;gap:4px;">
                     <button onclick="abrirGrupo('${g._id}')" style="padding:4px 10px;background:rgba(107,63,160,0.06);border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif;color:var(--royal-blue);">Abrir</button>
                     <button onclick="editarGrupo('${g._id}')" style="padding:4px 10px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif;color:var(--gray-500);">Editar</button>
+                    <button onclick="excluirGrupo('${g._id}','${g.nome}')" style="padding:4px 10px;background:rgba(217,64,88,0.06);border:1px solid rgba(217,64,88,0.2);border-radius:6px;cursor:pointer;font-size:0.75rem;font-family:DM Sans,sans-serif;color:#D94058;">Excluir</button>
                 </td>
             </tr>`).join('');
         }
@@ -5598,6 +5599,16 @@
                 if (data.success) { showSalvo(data.message); document.getElementById('grupoModal').remove(); loadGrupos(); }
                 else showAlert('error', data.message);
             } catch (err) { showAlert('error', 'Erro ao salvar grupo'); }
+        }
+
+        async function excluirGrupo(id, nome) {
+            if (!confirm('Excluir o grupo "' + nome + '"?\n\nEsta ação não pode ser desfeita. Membros e visitantes do grupo não serão excluídos.')) return;
+            try {
+                const res = await fetch(`${API_URL}/api/grupos/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.success) { showSalvo('Grupo excluído'); loadGrupos(); }
+                else showAlert('error', data.message || 'Erro ao excluir grupo');
+            } catch (err) { showAlert('error', 'Erro ao excluir grupo'); }
         }
 
         // DETALHE DO GRUPO
