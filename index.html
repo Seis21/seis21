@@ -9718,7 +9718,7 @@
                     tabelaHTML += '<tr style="background:'+cor+'08;"><td colspan="6" style="padding:6px 10px;font-size:0.78rem;font-weight:600;color:'+cor+';border-left:3px solid '+cor+';text-transform:uppercase;letter-spacing:0.03em;">'+cat+' — '+catPct+'% do total</td></tr>';
                     catMap[cat].itens.forEach(function(cf){
                         var itemPct = total > 0 ? (parseFloat(cf.valor||0)/total*100).toFixed(1) : '0';
-                        tabelaHTML += '<tr><td>'+cf.descricao+'</td><td style="font-size:0.82rem;color:var(--gray-400);">'+(cf.categoria||'-')+'</td><td style="font-size:0.82rem;color:var(--gray-400);">Dia '+(cf.diaVencimento||'-')+'</td><td style="font-weight:700;color:#D94058;">R$ '+parseFloat(cf.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td style="text-align:center;"><span style="font-size:0.78rem;font-weight:600;color:var(--dark-slate);background:var(--gray-100);padding:2px 8px;border-radius:10px;">'+itemPct+'%</span></td><td style="display:flex;gap:4px;"><button class="btn-action" onclick="modalNovoCustoFixo(\''+cf._id+'\')" title="Editar">Ed</button><button class="btn-action" onclick="removerCustoFixo(\''+cf._id+'\')" style="color:#ff6b6b;">X</button></td></tr>';
+                        tabelaHTML += '<tr><td>'+cf.descricao+'</td><td style="font-size:0.82rem;color:var(--gray-400);">'+(cf.categoria||'-')+'</td><td><input type="number" min="1" max="31" value="'+(cf.diaVencimento||'')+'" placeholder="Dia" title="Dia de débito/pagamento" onchange="atualizarDiaCF(\''+cf._id+'\',this.value)" style="width:60px;padding:3px 6px;border:1px solid #E8E6ED;border-radius:6px;font-family:inherit;font-size:0.85rem;color:#4A4458;text-align:center;" /></td><td style="font-weight:700;color:#D94058;">R$ '+parseFloat(cf.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td style="text-align:center;"><span style="font-size:0.78rem;font-weight:600;color:var(--dark-slate);background:var(--gray-100);padding:2px 8px;border-radius:10px;">'+itemPct+'%</span></td><td style="display:flex;gap:4px;"><button class="btn-action" onclick="modalNovoCustoFixo(\''+cf._id+'\')" title="Editar">Ed</button><button class="btn-action" onclick="removerCustoFixo(\''+cf._id+'\')" style="color:#ff6b6b;">X</button></td></tr>';
                     });
                 });
                 tabelaHTML += '</tbody></table>';
@@ -10006,12 +10006,76 @@
             if(isEdit){var list=await finAPI.getList('custosfixos');var cf=list.find(function(x){return x._id===editId;});if(cf){document.getElementById('cfDesc').value=cf.descricao||'';document.getElementById('cfCat').value=cf.categoria||cats[0];document.getElementById('cfValor').value=cf.valor||'';document.getElementById('cfDia').value=cf.diaVencimento||'';}}
         }
         async function salvarCustoFixo(editId){var d=document.getElementById('cfDesc').value.trim(),v=document.getElementById('cfValor').value;if(!d||!v){showAlert('error','Preencha Descrição e Valor.');return;}var dados={descricao:d,categoria:document.getElementById('cfCat').value,valor:parseFloat(v),diaVencimento:document.getElementById('cfDia').value||'-'};var result=editId?await finAPI.updateItem('custosfixos',editId,dados):await finAPI.addItem('custosfixos',dados);if(result){document.getElementById('modalCF').remove();showSalvo(editId?'Custo fixo atualizado':'Custo fixo cadastrado');switchFinTab('custosfixos',null);}}
+        async function atualizarDiaCF(id, dia) { var ok = await finAPI.updateItem('custosfixos', id, { diaVencimento: dia ? parseInt(dia) : '-' }); if(ok) showSalvo('Dia de débito atualizado'); }
         async function removerCustoFixo(id){if(!confirm('Remover?'))return;var ok=await finAPI.removeItem('custosfixos',id);if(ok)switchFinTab('custosfixos',null);}
 
         // === PATRIMÔNIO (COM LOTE + EDIÇÃO + CATEGORIAS CUSTOM) ===
         async function renderFinPatrimonio(c) {
             var bens=await finAPI.getList('patrimonio');var tot=bens.reduce(function(s,b){return s+(parseFloat(b.valorAtual)||0);},0);
-            c.innerHTML='<div style="background:rgba(107,63,160,0.03);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px;margin-bottom:10px;border-left:3px solid var(--royal-blue);"><p style="color:var(--gray-500);font-size:0.82rem;margin:0;line-height:1.5;"><strong style="color:var(--dark-slate);">Patrimônio</strong> — Liste os bens da igreja: imóvel, veículos, equipamentos de som, projetores, mobília, etc. Registre o valor atual e o estado de conservação. Serve para o Balanço Patrimonial e para controle do que a igreja possui.</p></div><div class="detail-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;"><h4 style="color:#1A1428;margin:0;font-size:1.1rem;">Patrimônio e Inventário</h4><div style="display:flex;gap:8px;"><button class="btn-add" onclick="modalNovoBem()" style="font-size:0.88rem;padding:6px 14px;">Novo Bem</button><button class="btn-add" onclick="modalCadastroLote()" style="font-size:0.88rem;padding:6px 14px;background:rgba(107,63,160,0.06);color:#8A849A;"> Cadastro em Lote</button></div></div><div style="background:rgba(107,63,160,0.04);border-radius:12px;padding:1rem;text-align:center;margin-bottom:1.2rem;border:1px solid #E8E6ED;"><div style="font-size:0.9rem;color:#4A4458;font-weight:500;">Valor Total do Patrimônio</div><div style="font-size:1.8rem;font-weight:700;color:#9B6FD0;">R$ '+tot.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div><div style="font-size:0.88rem;color:#4A4458;font-weight:500;">'+bens.length+' bens</div></div>'+(bens.length?'<table class="table"><thead><tr><th>Bem</th><th>Categoria</th><th>Aquisição</th><th>Valor Atual</th><th>Estado</th><th>Ações</th></tr></thead><tbody>'+bens.map(function(b){var ec={novo:'#5A9AD0',bom:'#2E9B5A',regular:'#D4A840',ruim:'#D94058',inservivel:'#888'};return '<tr><td>'+b.nome+'</td><td style="font-size:0.9rem;color:#4A4458;font-weight:500;">'+(b.categoria||'-')+'</td><td>'+(b.dataAquisicao?new Date(b.dataAquisicao+'T12:00:00').toLocaleDateString('pt-BR'):'-')+'</td><td style="font-weight:600;">R$ '+parseFloat(b.valorAtual||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td><span style="padding:2px 8px;border-radius:6px;font-size:0.82rem;background:'+(ec[b.estado]||'#888')+'22;color:'+(ec[b.estado]||'#888')+';">'+(b.estado||'-')+'</span></td><td style="display:flex;gap:4px;"><button class="btn-action" onclick="modalNovoBem(\''+b._id+'\')" title="Editar"></button><button class="btn-action" onclick="removerBem(\''+b._id+'\')" style="color:#ff6b6b;"></button></td></tr>';}).join('')+'</tbody></table>':'<p style="color:#8A849A;text-align:center;padding:2rem;">Nenhum bem cadastrado.</p>')+'</div>';
+            var historico=await finAPI.getList('patrimoniohistorico');
+            historico.sort(function(a,b){return (a.ano||0)-(b.ano||0);});
+            var anoAtual=new Date().getFullYear();
+            var jaRegistrouAno=historico.find(function(h){return h.ano==anoAtual;});
+
+            // Barra de histórico
+            var maxVal=historico.reduce(function(m,h){return Math.max(m,parseFloat(h.valor)||0);},1);
+            var historicoHTML='';
+            if(historico.length>0){
+                historicoHTML='<div style="margin-top:1.5rem;"><div style="font-size:0.82rem;font-weight:700;color:#4A4458;margin-bottom:0.8rem;letter-spacing:0.05em;text-transform:uppercase;">Evolução Anual</div>';
+                historicoHTML+='<div style="display:flex;gap:8px;align-items:flex-end;height:120px;margin-bottom:0.5rem;">';
+                historico.forEach(function(h){
+                    var pct=Math.round((parseFloat(h.valor)||0)/maxVal*100);
+                    var isAtual=h.ano==anoAtual;
+                    historicoHTML+='<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;">'
+                        +'<div style="font-size:0.7rem;color:#9B6FD0;font-weight:600;">R$'+Math.round((parseFloat(h.valor)||0)/1000)+'k</div>'
+                        +'<div style="width:100%;background:'+(isAtual?'#9B6FD0':'#6B3FA0')+';border-radius:4px 4px 0 0;height:'+pct+'%;min-height:4px;"></div>'
+                        +'<div style="font-size:0.75rem;color:#8A849A;font-weight:'+(isAtual?'700':'400')+';">'+h.ano+'</div>'
+                        +'</div>';
+                });
+                historicoHTML+='</div>';
+
+                // Tabela comparativa
+                historicoHTML+='<table class="table" style="margin-top:0.5rem;"><thead><tr><th>Ano</th><th>Valor Total</th><th>Variação</th><th></th></tr></thead><tbody>';
+                historico.forEach(function(h,i){
+                    var anterior=i>0?parseFloat(historico[i-1].valor)||0:null;
+                    var atual=parseFloat(h.valor)||0;
+                    var variacao=anterior!==null?((atual-anterior)/anterior*100):null;
+                    var cor=variacao===null?'#8A849A':variacao>=0?'#2E9B5A':'#D94058';
+                    var sinal=variacao===null?'—':variacao>=0?('▲ +'+variacao.toFixed(1)+'%'):('▼ '+variacao.toFixed(1)+'%');
+                    historicoHTML+='<tr>'
+                        +'<td style="font-weight:'+(h.ano==anoAtual?'700':'400')+';">'+(h.ano==anoAtual?'<span style="color:#9B6FD0;">'+h.ano+' ✦</span>':h.ano)+'</td>'
+                        +'<td style="font-weight:600;">R$ '+atual.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>'
+                        +'<td style="color:'+cor+';font-weight:600;">'+sinal+'</td>'
+                        +'<td><button class="btn-action" onclick="removerHistoricoPatrimonio(\''+h._id+'\')" style="color:#ff6b6b;" title="Remover">X</button></td>'
+                        +'</tr>';
+                });
+                historicoHTML+='</tbody></table></div>';
+            } else {
+                historicoHTML='<p style="color:#8A849A;font-size:0.88rem;margin-top:1rem;">Nenhum registro anual ainda. Clique em "Registrar Ano Atual" para começar o histórico.</p>';
+            }
+
+            c.innerHTML='<div style="background:rgba(107,63,160,0.03);border:1px solid var(--gray-200);border-radius:8px;padding:10px 14px;margin-bottom:10px;border-left:3px solid var(--royal-blue);"><p style="color:var(--gray-500);font-size:0.82rem;margin:0;line-height:1.5;"><strong style="color:var(--dark-slate);">Patrimônio</strong> — Liste os bens da igreja: imóvel, veículos, equipamentos de som, projetores, mobília, etc. Registre o valor atual e o estado de conservação. Serve para o Balanço Patrimonial e para controle do que a igreja possui.</p></div>'
+
+            // Card inventário
+            +'<div class="detail-card">'
+            +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;"><h4 style="color:#1A1428;margin:0;font-size:1.1rem;">Patrimônio e Inventário</h4><div style="display:flex;gap:8px;"><button class="btn-add" onclick="modalNovoBem()" style="font-size:0.88rem;padding:6px 14px;">Novo Bem</button><button class="btn-add" onclick="modalCadastroLote()" style="font-size:0.88rem;padding:6px 14px;background:rgba(107,63,160,0.06);color:#8A849A;"> Cadastro em Lote</button></div></div>'
+            +'<div style="background:rgba(107,63,160,0.04);border-radius:12px;padding:1rem;text-align:center;margin-bottom:1.2rem;border:1px solid #E8E6ED;"><div style="font-size:0.9rem;color:#4A4458;font-weight:500;">Valor Total do Patrimônio</div><div style="font-size:1.8rem;font-weight:700;color:#9B6FD0;">R$ '+tot.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div><div style="font-size:0.88rem;color:#4A4458;font-weight:500;">'+bens.length+' bens</div></div>'
+            +(bens.length?'<table class="table"><thead><tr><th>Bem</th><th>Categoria</th><th>Aquisição</th><th>Valor Atual</th><th>Estado</th><th>Ações</th></tr></thead><tbody>'+bens.map(function(b){var ec={novo:'#5A9AD0',bom:'#2E9B5A',regular:'#D4A840',ruim:'#D94058',inservivel:'#888'};return '<tr><td>'+b.nome+'</td><td style="font-size:0.9rem;color:#4A4458;font-weight:500;">'+(b.categoria||'-')+'</td><td>'+(b.dataAquisicao?new Date(b.dataAquisicao+'T12:00:00').toLocaleDateString('pt-BR'):'-')+'</td><td style="font-weight:600;">R$ '+parseFloat(b.valorAtual||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td><td><span style="padding:2px 8px;border-radius:6px;font-size:0.82rem;background:'+(ec[b.estado]||'#888')+'22;color:'+(ec[b.estado]||'#888')+';">'+(b.estado||'-')+'</span></td><td style="display:flex;gap:4px;"><button class="btn-action" onclick="modalNovoBem(\''+b._id+'\')" title="Editar"></button><button class="btn-action" onclick="removerBem(\''+b._id+'\')" style="color:#ff6b6b;"></button></td></tr>';}).join('')+'</tbody></table>':'<p style="color:#8A849A;text-align:center;padding:2rem;">Nenhum bem cadastrado.</p>')
+            +'</div>'
+
+            // Card histórico anual
+            +'<div class="detail-card" style="margin-top:1rem;">'
+            +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">'
+            +'<h4 style="color:#1A1428;margin:0;font-size:1.1rem;">Histórico Anual</h4>'
+            +'<div style="display:flex;gap:8px;align-items:center;">'
+            +(jaRegistrouAno
+                ? '<span style="font-size:0.8rem;color:#2E9B5A;font-weight:600;">✓ '+anoAtual+' já registrado</span>'
+                : '<button class="btn-add" onclick="registrarSnapshotPatrimonio('+tot+','+anoAtual+')" style="font-size:0.88rem;padding:6px 14px;">Registrar Ano Atual ('+anoAtual+')</button>'
+            )
+            +'</div></div>'
+            +'<p style="font-size:0.82rem;color:#8A849A;margin-bottom:0.8rem;">Snapshot anual do valor total do patrimônio. Registre uma vez por ano para acompanhar a evolução.</p>'
+            +historicoHTML
+            +'</div>';
         }
         async function modalNovoBem(editId) {
             var catsPadrao=['Imóvel','Veículo','Equipamento de Som','Instrumento Musical','Projetor/TV','Computador','Mobiliário','Utensílios','Ar Condicionado'];
@@ -10026,6 +10090,16 @@
         }
         async function salvarBem(editId){var n=document.getElementById('bemNome').value.trim(),va=document.getElementById('bemVA').value;if(!n||!va){showAlert('error','Preencha Nome e Valor.');return;}var dados={nome:n,categoria:document.getElementById('bemCat').value,dataAquisicao:document.getElementById('bemData').value,valorOriginal:parseFloat(document.getElementById('bemVO').value)||0,valorAtual:parseFloat(va),estado:document.getElementById('bemEst').value,localizacao:document.getElementById('bemLoc').value.trim()};var result=editId?await finAPI.updateItem('patrimonio',editId,dados):await finAPI.addItem('patrimonio',dados);if(result){document.getElementById('modalBem').remove();showSalvo(editId?'Bem atualizado':'Bem cadastrado');switchFinTab('patrimonio',null);}}
         async function removerBem(id){if(!confirm('Remover?'))return;var ok=await finAPI.removeItem('patrimonio',id);if(ok)switchFinTab('patrimonio',null);}
+        async function registrarSnapshotPatrimonio(valor, ano) {
+            if(!confirm('Registrar valor total de R$ '+parseFloat(valor).toLocaleString('pt-BR',{minimumFractionDigits:2})+' como patrimônio de '+ano+'?')) return;
+            var ok = await finAPI.addItem('patrimoniohistorico', { ano: ano, valor: valor, registradoEm: new Date().toISOString().slice(0,10) });
+            if(ok) { showSalvo('Patrimônio de '+ano+' registrado!'); switchFinTab('patrimonio', null); }
+        }
+        async function removerHistoricoPatrimonio(id) {
+            if(!confirm('Remover este registro anual?')) return;
+            var ok = await finAPI.removeItem('patrimoniohistorico', id);
+            if(ok) switchFinTab('patrimonio', null);
+        }
 
         // CADASTRO EM LOTE
         function modalCadastroLote() {
